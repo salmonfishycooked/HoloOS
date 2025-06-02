@@ -1,0 +1,4 @@
+boot/*.bin
+
+bochs.out
+hd60M.img
