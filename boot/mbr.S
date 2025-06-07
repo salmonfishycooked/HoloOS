@@ -38,7 +38,7 @@ SECTION MBR vstart=0x7c00
     ; ======= read loader from disk
     mov edi, LOADER_BASE_ADDR
     mov esi, LOADER_START_SECTOR
-    mov edx, 2
+    mov edx, 4
     call readFromDisk
 
     ; ======= hand over control to loader

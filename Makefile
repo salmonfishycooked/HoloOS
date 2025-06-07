@@ -5,7 +5,7 @@ MBR_BIN = $(patsubst %.S, %.bin, $(MBR_SRC))
 
 build: $(MBR_BIN) hd60M.img
 	dd if=boot/mbr.bin of=hd60M.img bs=512 count=1 seek=0 conv=notrunc
-	dd if=boot/loader.bin of=hd60M.img bs=512 count=1 seek=2 conv=notrunc
+	dd if=boot/loader.bin of=hd60M.img bs=512 count=4 seek=2 conv=notrunc
 
 run: build
 	bochs -f bochsrc.disk
