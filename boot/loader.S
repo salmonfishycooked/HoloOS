@@ -26,7 +26,9 @@ section LOADER vstart=LOADER_BASE_ADDR
     gdtPtr:         dw GDT_LIMIT
                     dd GDT_BASE
 
-    logoLoader:     db "HoloOS Loader"
+    totalMemBytes:  dd 0
+    ardsBuf:        times 244 db 0
+    ardsCnt:        dw 0
 
     loaderStart:
         ; ======= get the cursor position
@@ -47,6 +49,10 @@ section LOADER vstart=LOADER_BASE_ADDR
         mov bx, 0x000f
 
         int 0x10
+
+        ; ======= get available memory
+        call getMemCap
+        mov [totalMemBytes], eax
 
         ; ======= turn on protection mode
         ; 1. turn on A20
@@ -81,3 +87,88 @@ section LOADER vstart=LOADER_BASE_ADDR
         mov byte [gs:321], 0x0f
 
         jmp $
+
+    ; ---------------------------------
+    ; getMemCap will get the information of memory you can use
+    ; no arguments
+    ;
+    ; return value: eax (stores the upper bound of memory address)
+    ; ---------------------------------
+    [bits 16]
+    getMemCap:
+        .getMemE820:
+            mov ax, 0xe820
+            mov ebx, 0
+            mov di, ardsBuf
+            mov ecx, 20
+            mov edx, 0x534d4150
+            .loopGetArds:
+                int 0x15
+                jc .getMemE801
+
+                add di, 20
+                add word [ardsCnt], 1
+                mov eax, 0xe820
+
+                cmp ebx, 0
+                jnz .loopGetArds
+
+            mov cx, [ardsCnt]
+            mov bx, ardsBuf
+            mov eax, 0
+            .loopCalMaxMem:
+                mov edx, [bx]
+                add edx, [bx + 8]
+                cmp eax, edx
+                jae .goNextArd
+                mov eax, edx
+
+                .goNextArd:
+                add bx, 20
+                loop .loopCalMaxMem
+            jmp .getMemOK
+
+        .getMemE801:
+            mov ax, 0xe801
+            int 0x15
+            jc .getMem88
+
+            mov dx, 1024
+            mul dx
+            shl edx, 16
+            and eax, 0x0000ffff
+            or edx, eax
+            add edx, 1024 * 1024
+            mov esi, edx
+
+            mov eax, 64 * 1024
+            and ebx, 0x0000ffff
+            mul ebx
+            add esi, eax
+
+            mov eax, esi
+            jmp .getMemOK
+
+        .getMem88:
+            mov ah, 0x88
+            int 0x15
+            jc errorHandle
+
+            mov ecx, 1024
+            and eax, 0x0000ffff
+            mul ecx
+            add eax, 1024 * 1024
+
+        .getMemOK:
+            ret
+
+    ; ----------------------
+    ; error handler
+    ; ----------------------
+    [bits 16]
+    errorHandle:
+        jmp $
+            
+
+    ; ------ some data
+    logoLoader: db "HoloOS Loader"
