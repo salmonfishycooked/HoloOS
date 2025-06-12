@@ -86,7 +86,83 @@ section LOADER vstart=LOADER_BASE_ADDR
         mov byte [gs:320], 'P'
         mov byte [gs:321], 0x0f
 
+        ; ===== setup page table
+        call pageSetup
+
+        ; ===== do sth necessary and turn on paging mechanism
+        add dword [VIDEO_DESC + 4], 0xc0000000
+        add esp, 0xc0000000
+        add dword [gdtPtr + 2], 0xc0000000
+
+        ; set Page Directory Table's address to cr3
+        mov eax, PAGE_DIR_TABLE_ADDR
+        mov cr3, eax
+
+        ; turn on pg bit of cr0 (the 31st bit)
+        mov eax, cr0
+        or eax, 0x80000000
+        mov cr0, eax
+
+        ; reload gdtPtr
+        lgdt [gdtPtr]
+
+        mov byte [gs:480], 'V'
+        mov byte [gs:481], 0x0f
         jmp $
+
+    ; ---------------------------------
+    ; pageSetup initializes things about paging mechanism
+    ; no arguments
+    ; no return value
+    ; ---------------------------------
+    [bits 32]
+    pageSetup:
+        ; ===== clear Page Directory Table
+        mov ecx, 1024
+        mov esi, 0
+        .pageSetupClear:
+            mov dword [PAGE_DIR_TABLE_ADDR + esi], 0
+            add esi, 4
+            loop .pageSetupClear
+
+        ; ===== init Page Directory Entry
+        mov eax, PAGE_DIR_TABLE_ADDR + 0x1000
+        or eax, PG_US_U | PG_RW_W | PG_P
+        mov [PAGE_DIR_TABLE_ADDR], eax
+        mov [PAGE_DIR_TABLE_ADDR + 0x300 * 4], eax      ; the first pde of kernel
+
+        ; ===== init Page Table Entry (lower 1MB)
+        mov eax, 0
+        or eax, PG_US_U | PG_RW_W | PG_P
+        mov esi, 0
+        mov ecx, 256
+        .pageSetupInitPTE:
+            mov [PAGE_DIR_TABLE_ADDR + 0x1000 + esi * 4], eax
+            inc esi
+            add eax, 0x1000
+            loop .pageSetupInitPTE
+
+        ; ===== init remaining Page Directory Entry of kernel (from pde idx 0x301 to 0x3fe)
+        mov eax, PAGE_DIR_TABLE_ADDR + 0x2000
+        or eax, PG_US_U | PG_RW_W | PG_P
+        mov esi, 0x301
+        mov ecx, 0xfe
+        .pageSetupInitKernelPDE:
+            mov [PAGE_DIR_TABLE_ADDR + esi * 4], eax
+            inc esi
+            add eax, 0x1000
+            loop .pageSetupInitKernelPDE
+
+        ; let the last pde point to PAGE_DIR_TABLE_ADDR
+        mov eax, PAGE_DIR_TABLE_ADDR
+        or eax, PG_US_U | PG_RW_W | PG_P
+        mov dword [PAGE_DIR_TABLE_ADDR + 0x3ff * 4], eax
+
+        ret
+
+    ; pageSetup ENDS
+    ; ---------------------------------
+
 
     ; ---------------------------------
     ; getMemCap will get the information of memory you can use
@@ -161,6 +237,10 @@ section LOADER vstart=LOADER_BASE_ADDR
 
         .getMemOK:
             ret
+
+    ; getMemCap ENDS
+    ; ----------------------
+
 
     ; ----------------------
     ; error handler
