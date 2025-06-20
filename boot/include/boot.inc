@@ -61,3 +61,8 @@ PG_RW_R             equ 00b
 PG_RW_W             equ 10b
 PG_US_S             equ 000b
 PG_US_U             equ 100b
+
+; ------------- attributes of kernel.bin ---------
+KERNEL_START_SECTOR     equ 9
+KERNEL_BIN_BASE_ADDR    equ 0x70000
+KERNEL_ENTRY_POINT      equ 0xc0001500

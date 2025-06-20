@@ -86,6 +86,12 @@ section LOADER vstart=LOADER_BASE_ADDR
         mov byte [gs:320], 'P'
         mov byte [gs:321], 0x0f
 
+        ; ===== read kernel.bin into memory
+        mov edi, KERNEL_BIN_BASE_ADDR
+        mov esi, KERNEL_START_SECTOR
+        mov edx, 200
+        call readFromDisk64
+
         ; ===== setup page table
         call pageSetup
 
@@ -106,9 +112,88 @@ section LOADER vstart=LOADER_BASE_ADDR
         ; reload gdtPtr
         lgdt [gdtPtr]
 
+        jmp SELECTOR_CODE:enterKernel
+
+    enterKernel:
+        ; ===== init kernel.bin
+        call kernelInit
+
         mov byte [gs:480], 'V'
         mov byte [gs:481], 0x0f
-        jmp $
+        
+        ; ===== hand over control flow to kernel
+        mov esp, 0xc009f000
+        jmp KERNEL_ENTRY_POINT
+
+
+    ; ---------------------------------
+    ; kernelInit will initialize kernel.bin to physical memory
+    ; no args
+    ; no ret
+    ; --------------------------------
+    [bits 32]
+    kernelInit:
+        xor eax, eax
+        xor ebx, ebx
+        xor ecx, ecx
+        xor edx, edx
+
+        mov ebx, [KERNEL_BIN_BASE_ADDR + 28]        ; e_phoff
+        mov dx, [KERNEL_BIN_BASE_ADDR + 42]        ; e_phentsize
+        mov cx, [KERNEL_BIN_BASE_ADDR + 44]        ; e_phnum
+
+        add ebx, KERNEL_BIN_BASE_ADDR               ; real address of program header
+        .kernelInitCopySeg:
+            cmp byte [ebx], 0
+            je .kernelInitPtNull
+
+            ; do memcpy(dst, src, size)
+            push dword [ebx + 16]
+
+            mov eax, [ebx + 4]
+            add eax, KERNEL_BIN_BASE_ADDR
+            push eax
+
+            push dword [ebx + 8]
+            call memcpy
+
+            add esp, 12
+            .kernelInitPtNull:
+                add ebx, edx
+                loop .kernelInitCopySeg
+
+        ret
+
+    ; kernelInit ENDS
+    ; ---------------------------------
+
+
+    ; ---------------------------------
+    ; memcpy copys data from src to dst
+    ; the number of copied data is size (unit: byte)
+    ;
+    ; args: (dst, src, size) (push to stack in order)
+    ; no ret
+    ; ---------------------------------
+    memcpy:
+        cld
+        push ebp
+        mov ebp, esp
+
+        push ecx
+
+        mov edi, [ebp + 8]
+        mov esi, [ebp + 12]
+        mov ecx, [ebp + 16]
+        rep movsb
+
+        pop ecx
+        pop ebp
+        ret
+
+    ; memcpy ENDS
+    ; ---------------------------------
+
 
     ; ---------------------------------
     ; pageSetup initializes things about paging mechanism
@@ -240,6 +325,74 @@ section LOADER vstart=LOADER_BASE_ADDR
 
     ; getMemCap ENDS
     ; ----------------------
+
+
+    ; ----------------------------------------
+    ; readFromDisk64 reads data of sectors in Primary Disk (using LBA form)
+    ;
+    ; edi: start address where you want to store the read data from disk.
+    ; esi: start sector number where you want to read from the disk.
+    ; edx: number of sector that you want to read. 
+    ; ----------------------------------------
+    [bits 32]
+    readFromDisk64:
+        ; ========= backup some registers
+        mov ecx, edx
+
+        ; ========= 1. set number of sector that will be read
+        mov dx, 0x1f2
+        mov al, cl
+        out dx, al
+
+        ; ========= 2. set LBA and device register
+        mov eax, esi
+        ; set LBA Low 8bit
+        mov dx, 0x1f3
+        out dx, al
+
+        ; set LBA Mid 8bit
+        shr eax, 8
+        mov dx, 0x1f4
+        out dx, al
+
+        ; set LBA High 8bit
+        shr eax, 8
+        mov dx, 0x1f5
+        out dx, al
+
+        ; set LBA left-most 4bit and device regs
+        shr eax, 8
+        and al, 00001111b
+        or al, 11100000b         ; set 4~7 bit of device reg to 1110 (LBA Mode)
+        mov dx, 0x1f6
+        out dx, al
+
+        ; ========= 3. set read command
+        mov dx, 0x1f7
+        mov al, 0x20
+        out dx, al
+
+        ; ========= 4. check if ready
+        .notReady:
+            in al, dx
+            and al, 10001000b
+            cmp al, 00001000b
+            jnz .notReady
+
+        ; ========= 5. read data from disk
+        mov eax, 256
+        mul ecx
+        mov ecx, eax
+        mov dx, 0x1f0
+        .goOnRead:
+            in ax, dx
+            mov [edi], ax
+            add edi, 2
+            loop .goOnRead
+        ret
+        
+    ; readFromDisk END
+    ; ----------------------------------------
 
 
     ; ----------------------
