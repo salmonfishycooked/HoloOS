@@ -3,6 +3,7 @@
 
 #include "stdint.h"
 
-extern void putchar(uint8 ch);
+void putchar(uint8 ch);
+void puts(char *str);
 
 #endif

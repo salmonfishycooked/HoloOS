@@ -12,6 +12,9 @@ void main() {
     putchar('2');
     putchar('\b');
     putchar('3');
+    putchar('\n');
+
+    puts("I output the string all by puts function [#smile]\n");
 
     while (1) {}
 }

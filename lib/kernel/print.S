@@ -34,7 +34,7 @@ putchar:
     mov bx, ax              ; store into bx
 
     ; ==== get the args, and show it up the screen
-    mov cx, [esp + 36]
+    mov ecx, [esp + 36]
 
     cmp cl, 0xa
     jz .isLineFeed
@@ -119,3 +119,35 @@ putchar:
     .putDone:
         popad
         ret
+
+; putchar ENDS
+; -------------------------------------
+
+; -------------------------------------
+; puts will input a string onto screen
+;
+; prototype: void puts(char *str);
+; no ret
+; -------------------------------------
+global puts
+puts:
+    ; ==== get the address of string
+    mov esi, [esp + 4]
+
+    .outChar:
+        mov cl, [esi]
+        cmp cl, 0
+        jz .putsOver
+
+        push ecx
+        call putchar
+        add esp, 4
+
+        inc esi
+        jmp .outChar
+
+    .putsOver:
+    ret
+
+; puts ENDS
+; ------------------------------------
