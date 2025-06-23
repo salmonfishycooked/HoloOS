@@ -3,5 +3,7 @@ boot/*.bin
 kernel/*.o
 kernel/*.bin
 
+lib/kernel/*.o
+
 bochs.out
 hd60M.img

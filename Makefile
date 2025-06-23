@@ -17,13 +17,19 @@ run: build
 clean:
 	rm -f boot/*.bin hd60M.img
 	rm -f kernel/*.o kernel/*.bin
+	rm -f lib/kernel/*.o
 
 boot/%.bin: boot/%.S
 	nasm -f bin -o $@ -I boot/include/ $<
 
-kernel/kernel.bin: kernel/kernel.c
-	gcc -m32 -c -o kernel/kernel.o $<
-	ld -m elf_i386 -o $@ -Ttext 0xc0001500 -e main kernel/kernel.o
+lib/kernel/%.o: lib/kernel/%.S
+	nasm -f elf -o $@ $<
+
+kernel/kernel.bin: kernel/kernel.c lib/kernel/print.o
+	gcc -m32 -I include/ -c -o kernel/kernel.o $<
+	ld -m elf_i386 -o $@ -Ttext 0xc0001500 -e main \
+	kernel/kernel.o \
+	lib/kernel/print.o
 
 hd60M.img:
 	bximage -hd=60M -func=create -imgmode="flat" -q hd60M.img
