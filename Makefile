@@ -15,6 +15,7 @@ clean:
 	rm -f boot/*.bin hd60M.img
 	rm -f kernel/*.o kernel/*.bin
 	rm -f lib/kernel/*.o
+	rm -f lib/kernel/c/*.o
 
 boot/%.bin: boot/%.S
 	nasm -f bin -o $@ -I boot/include/ $<
@@ -22,14 +23,18 @@ boot/%.bin: boot/%.S
 lib/kernel/%.o: lib/kernel/%.S
 	nasm -f elf -o $@ $<
 
+lib/kernel/c/%.o: lib/kernel/c/%.c
+	gcc -m32 -I include/ -c -fno-builtin -o $@ $<
+
 kernel/%.o: kernel/%.c
 	gcc -m32 -I include/ -c -fno-builtin -o $@ $<
 
 kernel/kernel.bin: kernel/main.o kernel/init.o kernel/interrupt.o lib/kernel/print.o \
-					lib/kernel/kernel.o
+					lib/kernel/c/printC.o lib/kernel/kernel.o
 	ld -m elf_i386 -o $@ -Ttext 0xc0001500 -e main \
 	kernel/main.o \
 	lib/kernel/print.o \
+	lib/kernel/c/printC.o \
 	kernel/init.o \
 	kernel/interrupt.o \
 	lib/kernel/kernel.o

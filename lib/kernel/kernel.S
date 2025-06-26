@@ -1,6 +1,7 @@
 [bits 32]
 
-extern puts;
+extern puts
+extern idtTable
 
 section .data
 intrStr: db "interrupt occured!", 0xa, 0
@@ -12,22 +13,40 @@ intrEntryTable:
 section .text
 intr%1entry:
     %2
-    push intrStr
-    call puts
-    add esp, 4
 
-    ; if trap into intr by slave pic, besides sending EOI to master pic,
-    ; also needs to send EOI to slave pic.
+    ; save context
+    push ds
+    push es
+    push fs
+    push gs
+    pushad
+
+    ; if trap into intr by slave PIC, besides sending EOI to master pic,
+    ; we also needs to send EOI to slave pic.
     mov al, 0x20                ; EOI
     out 0xa0, al                ; send to slave
     out 0x20, al                ; send to master
 
-    add esp, 4                  ; ignore ERROR_CODE
-    iret
+    push %1
+    call [idtTable + %1 * 4]
+    add esp, 4
+
+    jmp intrExit
 
 section .data
     dd intr%1entry
 %endmacro
+
+section .text
+intrExit:
+    popad
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    add esp, 4                  ; ignore ERROR_CODE
+
+    iretd
 
 VECTOR 0x00, push 0             ; push 0 for intrrupts not having ERROR_CODE
 VECTOR 0x01, push 0

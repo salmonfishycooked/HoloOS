@@ -25,9 +25,48 @@ static void makeIdtDesc(struct gateDesc *desc, uint8 attr, intrHandler func);
 // idt is interrupt descriptor table
 static struct gateDesc idt[IDT_DESC_CNT];
 
+char *intrName[IDT_DESC_CNT];
+intrHandler idtTable[IDT_DESC_CNT];
+
 // intrEntryTable is defined in kernel.S
 // records the entry address of every interrupt
 extern intrHandler intrEntryTable[IDT_DESC_CNT];
+
+static void generalIntrHandler(uint8 num) {
+    if (num == 0x27 || num == 0x2f) { return; }
+
+    puts("int 0x");
+    putint(num);
+    puts(" occurs!\n");
+}
+
+static void exceptionInit() {
+    for (int i = 0; i < IDT_DESC_CNT; i++) {
+        idtTable[i] = generalIntrHandler;
+        intrName[i] = "unknown";
+    }
+
+   intrName[0] = "#DE Divide Error";
+   intrName[1] = "#DB Debug Exception";
+   intrName[2] = "NMI Interrupt";
+   intrName[3] = "#BP Breakpoint Exception";
+   intrName[4] = "#OF Overflow Exception";
+   intrName[5] = "#BR BOUND Range Exceeded Exception";
+   intrName[6] = "#UD Invalid Opcode Exception";
+   intrName[7] = "#NM Device Not Available Exception";
+   intrName[8] = "#DF Double Fault Exception";
+   intrName[9] = "Coprocessor Segment Overrun";
+   intrName[10] = "#TS Invalid TSS Exception";
+   intrName[11] = "#NP Segment Not Present";
+   intrName[12] = "#SS Stack Fault Exception";
+   intrName[13] = "#GP General Protection Exception";
+   intrName[14] = "#PF Page-Fault Exception";
+   // intrName[15] is reserved by intel
+   intrName[16] = "#MF x87 FPU Floating-Point Error";
+   intrName[17] = "#AC Alignment Check Exception";
+   intrName[18] = "#MC Machine-Check Exception";
+   intrName[19] = "#XF SIMD Floating-Point Exception";
+}
 
 // picInit initializes Programmable Interrupt Controller
 static void picInit() {
@@ -74,6 +113,7 @@ void idtInit() {
     puts("idtInit is starting...\n");
 
     idtDescInit();
+    exceptionInit();
     picInit();
 
     // load idt
