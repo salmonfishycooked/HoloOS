@@ -86,8 +86,8 @@ putchar:
     ; ==== scroll up the screen
     .scrollUp:
         ; ==== clear the top line, and move below lines up a line.
-        mov edi, 0xc000b800
-        mov esi, 0xc000b8a0
+        mov edi, 0xc00b8000
+        mov esi, 0xc00b80a0
         mov ecx, 960
         rep movsd
 
@@ -151,3 +151,44 @@ puts:
 
 ; puts ENDS
 ; ------------------------------------
+
+
+; ------------------------------------
+; clearScreen clears out the screen
+;
+; no args
+; no ret
+; ------------------------------------
+global clearScreen
+clearScreen:
+    ; ==== clear the screen
+    mov esi, 0xc00b8000
+    mov ecx, 2000
+    mov dx, (CHAR_ATTR_DEFAULT << 8) + 0
+    .clearScreenLoop:
+        mov [esi], dx
+        add esi, 2
+        loop .clearScreenLoop
+
+    ; ==== set the position of the cursor to (0, 0)
+    ; ==== and send it to graphic processor
+    mov bx, 0
+
+    mov dx, 0x3d4
+    mov al, 0x0e
+    out dx, al
+    mov dx, 0x3d5
+    mov al, bh
+    out dx, al
+
+    mov dx, 0x3d4
+    mov al, 0x0f
+    out dx, al
+    mov dx, 0x3d5
+    mov al, bl
+    out dx, al
+
+    ret
+
+; clearScreen ENDS
+; --------------------------------------

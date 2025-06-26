@@ -5,5 +5,6 @@
 
 void putchar(uint8 ch);
 void puts(char *str);
+void clearScreen();
 
 #endif
