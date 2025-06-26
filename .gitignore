@@ -6,5 +6,7 @@ kernel/*.bin
 lib/kernel/*.o
 lib/kernel/c/*.o
 
+device/*.o
+
 bochs.out
 hd60M.img

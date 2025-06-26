@@ -1,7 +1,10 @@
 #include <kernel/print.h>
 #include <kernel/interrupt.h>
+#include <device/timer.h>
 
 void initAll() {
-    puts("inn\n");
+    puts("init all...\n");
+
     idtInit();                  // initialize interrupt
+    timerInit();                // initialize PIT8253 for timer interrupt
 }

@@ -4,7 +4,7 @@
 void main() {
     clearScreen();
 
-    puts("I am HoloOS\n");
+    puts("HoloOS is booting...\n");
 
     initAll();
 
