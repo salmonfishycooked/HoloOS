@@ -1,7 +1,7 @@
 #include <kernel/print.h>
 #include <kernel/init.h>
 
-void main() {
+int main() {
     clearScreen();
 
     puts("HoloOS is booting...\n");

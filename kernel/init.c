@@ -1,5 +1,6 @@
 #include <kernel/print.h>
 #include <kernel/interrupt.h>
+#include <kernel/init.h>
 #include <device/timer.h>
 
 void initAll() {

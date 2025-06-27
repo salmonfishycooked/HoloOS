@@ -1,12 +1,5 @@
-boot/*.bin
+build/
 
-kernel/*.o
-kernel/*.bin
-
-lib/kernel/*.o
-lib/kernel/c/*.o
-
-device/*.o
+holoOS.img
 
 bochs.out
-hd60M.img

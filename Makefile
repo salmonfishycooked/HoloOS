@@ -1,48 +1,91 @@
-MBR_SRC = boot/mbr.S boot/loader.S
-MBR_BIN = $(patsubst %.S, %.bin, $(MBR_SRC))
+OS = holoOS
 
-.PHONY: build run clean
+BUILD_DIR = ./build
 
-build: $(MBR_BIN) kernel/kernel.bin hd60M.img
-	dd if=boot/mbr.bin of=hd60M.img bs=512 count=1 seek=0 conv=notrunc
-	dd if=boot/loader.bin of=hd60M.img bs=512 count=4 seek=2 conv=notrunc
-	dd if=kernel/kernel.bin of=hd60M.img bs=512 count=200 seek=9 conv=notrunc
+ENTRY_POINT = 0xc0001500
 
-run: build
-	bochs -f bochsrc.disk
+AS = nasm
+CC = gcc
+LD = ld
+LIB = -I include/
+ASFLAGS = -f elf
+CFLAGS = -m32 -Wall $(LIB) -c -fno-builtin -W -Wstrict-prototypes \
+         -Wmissing-prototypes
+LDFLAGS = -m elf_i386 -Ttext $(ENTRY_POINT) -e main -Map $(BUILD_DIR)/kernel.map
+
+OBJS = $(BUILD_DIR)/kernel/main.o \
+       $(BUILD_DIR)/kernel/init.o \
+       $(BUILD_DIR)/kernel/interrupt.o \
+       $(BUILD_DIR)/lib/kernel/kernel.o \
+       $(BUILD_DIR)/lib/kernel/printC.o \
+       $(BUILD_DIR)/lib/kernel/print.o \
+       $(BUILD_DIR)/device/timer.o \
+
+
+# ------------ C Source Code Compile (to obj) ---------------
+$(BUILD_DIR)/kernel/main.o: kernel/main.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/kernel/init.o: kernel/init.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/kernel/interrupt.o: kernel/interrupt.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/lib/kernel/printC.o: lib/kernel/printC.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/device/timer.o: device/timer.c
+	$(CC) $(CFLAGS) $< -o $@
+
+
+# ------------ ASM Source Code Compile (to obj) ---------------
+$(BUILD_DIR)/lib/kernel/kernel.o: lib/kernel/kernel.S
+	$(AS) $(ASFLAGS) $< -o $@
+
+$(BUILD_DIR)/lib/kernel/print.o: lib/kernel/print.S
+	$(AS) $(ASFLAGS) $< -o $@
+
+
+# ------------ MBR and BootLoader  ------------------
+$(BUILD_DIR)/boot/mbr.bin: boot/mbr.S
+	$(AS) -f bin -I boot/include/ $< -o $@
+
+$(BUILD_DIR)/boot/loader.bin: boot/loader.S
+	$(AS) -f bin -I boot/include/ $< -o $@
+
+
+# ---------------- Linking all objects -------------------
+$(BUILD_DIR)/kernel.bin: $(OBJS)
+	$(LD) $(LDFLAGS) $^ -o $@
+
+
+# ---------------- create OS Image -------------------
+$(OS).img:
+	bximage -hd=60M -func=create -imgmode="flat" -q $(OS).img
+
+
+# ----------------- Constructions --------------------
+.PHONY: all run clean createImg createDir
+
+createDir:
+	mkdir -p $(BUILD_DIR)/kernel
+	mkdir -p $(BUILD_DIR)/lib/kernel
+	mkdir -p $(BUILD_DIR)/device
+	mkdir -p $(BUILD_DIR)/boot
+
+createImg: $(OS).img
+	dd if=$(BUILD_DIR)/boot/mbr.bin of=$(OS).img bs=512 count=1 seek=0 conv=notrunc
+	dd if=$(BUILD_DIR)/boot/loader.bin of=$(OS).img bs=512 count=4 seek=2 conv=notrunc
+	dd if=$(BUILD_DIR)/kernel.bin of=$(OS).img bs=512 count=200 seek=9 conv=notrunc
 
 clean:
-	rm -f boot/*.bin hd60M.img
-	rm -f kernel/*.o kernel/*.bin
-	rm -f lib/kernel/*.o
-	rm -f lib/kernel/c/*.o
-	rm -f device/*.o
+	rm -f $(OS).img
+	rm -rf ./$(BUILD_DIR)
 
-boot/%.bin: boot/%.S
-	nasm -f bin -o $@ -I boot/include/ $<
+build: $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/boot/mbr.bin $(BUILD_DIR)/boot/loader.bin
 
-lib/kernel/%.o: lib/kernel/%.S
-	nasm -f elf -o $@ $<
+all: createDir build createImg
 
-lib/kernel/c/%.o: lib/kernel/c/%.c
-	gcc -m32 -I include/ -c -fno-builtin -o $@ $<
-
-kernel/%.o: kernel/%.c
-	gcc -m32 -I include/ -c -fno-builtin -o $@ $<
-
-device/%.o: device/%.c
-	gcc -m32 -I include/ -c -fno-builtin -o $@ $<
-
-kernel/kernel.bin: kernel/main.o kernel/init.o kernel/interrupt.o lib/kernel/print.o \
-					lib/kernel/c/printC.o lib/kernel/kernel.o device/timer.o
-	ld -m elf_i386 -o $@ -Ttext 0xc0001500 -e main \
-	kernel/main.o \
-	lib/kernel/print.o \
-	lib/kernel/c/printC.o \
-	kernel/init.o \
-	kernel/interrupt.o \
-	lib/kernel/kernel.o \
-	device/timer.o
-
-hd60M.img:
-	bximage -hd=60M -func=create -imgmode="flat" -q hd60M.img
+run: all
+	bochs -f bochsrc.disk
