@@ -11,6 +11,9 @@
 #define PIC_S_CTRL   0xa0       // PIC Slave's control port
 #define PIC_S_DATA   0xa1       // PIC Slave's data port
 
+#define EFLAGS_IF   0x00000200  // IF flag's position in eflags
+#define GET_EFLAGS(EFLAG_VAR)   asm volatile ("pushfl; popl %0" : "=g"(EFLAG_VAR))
+
 // gateDesc is descriptor of interrupt gate
 struct gateDesc {
     uint16 funcOffsetLowWord;
@@ -106,6 +109,36 @@ static void idtDescInit() {
     }
 
     puts("idtDescInit done.\n");
+}
+
+// intrEnable will turn on interrupt
+enum intrStatus intrEnable() {
+    enum intrStatus oldStatus = INTR_ON;
+    if (intrGetStatus() == INTR_OFF) {
+        asm volatile ("sti");
+        oldStatus = INTR_OFF;
+    }
+
+    return oldStatus;
+}
+
+// intrDisable will turn off interrupt
+enum intrStatus intrDisable() {
+    enum intrStatus oldStatus = INTR_OFF;
+    if (intrGetStatus() == INTR_ON) {
+        asm volatile ("cli");
+        oldStatus = INTR_ON;
+    }
+
+    return oldStatus;
+}
+
+// intrGetStatus will return current state of interrupt (on/off)
+enum intrStatus intrGetStatus() {
+    uint32 eflags = 0;
+    GET_EFLAGS(eflags);
+
+    return eflags && EFLAGS_IF ? INTR_ON : INTR_OFF;
 }
 
 // idtInit will do all of the work of interrupt initialization

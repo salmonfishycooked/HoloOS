@@ -10,7 +10,7 @@ LD = ld
 LIB = -I include/
 ASFLAGS = -f elf
 CFLAGS = -m32 -Wall $(LIB) -c -fno-builtin -W -Wstrict-prototypes \
-         -Wmissing-prototypes
+         -Wmissing-prototypes -DNDEBUG
 LDFLAGS = -m elf_i386 -Ttext $(ENTRY_POINT) -e main -Map $(BUILD_DIR)/kernel.map
 
 OBJS = $(BUILD_DIR)/kernel/main.o \
@@ -20,6 +20,7 @@ OBJS = $(BUILD_DIR)/kernel/main.o \
        $(BUILD_DIR)/lib/kernel/printC.o \
        $(BUILD_DIR)/lib/kernel/print.o \
        $(BUILD_DIR)/device/timer.o \
+       $(BUILD_DIR)/kernel/debug.o
 
 
 # ------------ C Source Code Compile (to obj) ---------------
@@ -36,6 +37,9 @@ $(BUILD_DIR)/lib/kernel/printC.o: lib/kernel/printC.c
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/device/timer.o: device/timer.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/kernel/debug.o: kernel/debug.c
 	$(CC) $(CFLAGS) $< -o $@
 
 

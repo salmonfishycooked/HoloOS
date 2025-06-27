@@ -1,5 +1,6 @@
 #include <kernel/print.h>
 #include <kernel/init.h>
+#include <kernel/debug.h>
 
 int main() {
     clearScreen();
@@ -8,7 +9,9 @@ int main() {
 
     initAll();
 
-    asm volatile ("sti");
+    // asm volatile ("sti");
+
+    ASSERT(0 == 1);
 
     while (1) {}
 }

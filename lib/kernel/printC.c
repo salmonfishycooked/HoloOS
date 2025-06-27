@@ -1,8 +1,6 @@
 #include <kernel/print.h>
 #include "stdint.h"
 
-extern void putchar(uint8 ch);
-
 // putint will output a unsigned integer onto screen (hex mode)
 void putint(uint32 num) {
     uint8 digit[8];
@@ -18,7 +16,7 @@ void putint(uint32 num) {
 
         leading = 0;
         char ch = digit[i] + 48;
-        if (digit[i] >= 10) { ch = digit[i] + 97; }
+        if (digit[i] >= 10) { ch = digit[i] + 87; }
 
         putchar(ch);
     }
