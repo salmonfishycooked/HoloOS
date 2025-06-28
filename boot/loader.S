@@ -220,10 +220,18 @@ section LOADER vstart=LOADER_BASE_ADDR
         mov esi, 0
         mov ecx, 256
         .pageSetupInitPTE:
-            mov [PAGE_DIR_TABLE_ADDR + 0x1000 + esi * 4], eax
-            inc esi
+            mov [PAGE_DIR_TABLE_ADDR + 0x1000 + esi], eax
+            add esi, 4
             add eax, 0x1000
             loop .pageSetupInitPTE
+
+        ; clear remaining pte of the first Page Table Entry
+        mov ecx, 768
+        mov esi, 1024
+        .pageSetupClearRemFirstPTE:
+            mov dword [PAGE_DIR_TABLE_ADDR + 0x1000 + esi], 0
+            add esi, 4
+            loop .pageSetupClearRemFirstPTE
 
         ; ===== init remaining Page Directory Entry of kernel (from pde idx 0x301 to 0x3fe)
         mov eax, PAGE_DIR_TABLE_ADDR + 0x2000
@@ -231,12 +239,20 @@ section LOADER vstart=LOADER_BASE_ADDR
         mov esi, 0x301
         mov ecx, 0xfe
         .pageSetupInitKernelPDE:
-            mov [PAGE_DIR_TABLE_ADDR + esi * 4], eax
-            inc esi
+            mov [PAGE_DIR_TABLE_ADDR + esi], eax
+            add esi, 4
             add eax, 0x1000
             loop .pageSetupInitKernelPDE
 
-        ; let the last pde point to PAGE_DIR_TABLE_ADDR
+        ; clear corresponding pte pointed by pde from 0x301 to 0x3fe
+        mov ecx, 254 * 1024
+        mov esi, 0x2000
+        .pageSetupClearKernelPTE:
+            mov dword [PAGE_DIR_TABLE_ADDR + 0x1000 + esi], 0
+            add esi, 4
+            loop .pageSetupClearKernelPTE
+
+        ; ===== let the last pde point to PAGE_DIR_TABLE_ADDR
         mov eax, PAGE_DIR_TABLE_ADDR
         or eax, PG_US_U | PG_RW_W | PG_P
         mov dword [PAGE_DIR_TABLE_ADDR + 0x3ff * 4], eax

@@ -1,5 +1,6 @@
 #include <kernel/bitmap.h>
 #include <kernel/debug.h>
+#include <kernel/print.h>
 #include <string.h>
 
 // bitmapInit initializes the bmap passed in.
@@ -16,19 +17,19 @@ bool bitmapTest(struct bitmap *bmap, uint32 bitIdx) {
 // bitmapScan finds the start index of cnt consecutive available bits.
 // return > 0 if available enough
 // return -1 if no enough bits
-uint32 bitmapScan(struct bitmap *bmap, uint32 cnt) {
+int bitmapScan(struct bitmap *bmap, uint32 cnt) {
     // find 0 bit byte by byte.
-    uint32 idx = 0, sz = bmap->size;
-    while (idx < sz && bmap->bits[idx] && 0xff) { idx += 1; }
+    int idx = 0, sz = bmap->size;
+    while (idx < sz && bmap->bits[idx] == 0xff) { idx += 1; }
 
     // no enough bit can be allocated.
     if (idx == sz) { return -1; }
 
     // find cnt consecutive 0 bits.
-    idx = idx * 8;
+    idx = idx * 8, sz = sz * 8;
     uint32 curCnt = 0;
     for (; idx < sz; idx++) {
-        if (bitmapTest(bmap, idx)) { curCnt += 1; }
+        if (!bitmapTest(bmap, idx)) { curCnt += 1; }
         else { curCnt = 0; }
 
         if (curCnt == cnt) { return idx + 1 - cnt; }

@@ -20,4 +20,6 @@ void putint(uint32 num) {
 
         putchar(ch);
     }
+
+    if (leading) { putchar('0'); }
 }

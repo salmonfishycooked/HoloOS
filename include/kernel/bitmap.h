@@ -10,7 +10,7 @@ struct bitmap {
 
 void bitmapInit(struct bitmap *bmap);
 bool bitmapTest(struct bitmap *bmap, uint32 bitIdx);
-uint32 bitmapScan(struct bitmap *bmap, uint32 cnt);
+int bitmapScan(struct bitmap *bmap, uint32 cnt);
 void bitmapSet(struct bitmap *bmap, uint32 bitIdx, int8 val);
 
 #endif

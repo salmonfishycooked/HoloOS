@@ -25,6 +25,7 @@ OBJS = $(BUILD_DIR)/kernel/main.o \
        $(BUILD_DIR)/kernel/bitmap.o \
        $(BUILD_DIR)/kernel/memory.o
 
+
 # ------------ C Source Code Compile (to obj) ---------------
 $(BUILD_DIR)/kernel/main.o: kernel/main.c
 	$(CC) $(CFLAGS) $< -o $@
