@@ -89,7 +89,7 @@ createImg: $(OS).img
 
 clean:
 	rm -f $(OS).img
-	rm -rf ./$(BUILD_DIR)
+	rm -rf $(BUILD_DIR)/
 
 build: $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/boot/mbr.bin $(BUILD_DIR)/boot/loader.bin
 
