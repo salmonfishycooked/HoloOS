@@ -21,8 +21,9 @@ OBJS = $(BUILD_DIR)/kernel/main.o \
        $(BUILD_DIR)/lib/kernel/print.o \
        $(BUILD_DIR)/device/timer.o \
        $(BUILD_DIR)/kernel/debug.o \
-       $(BUILD_DIR)/lib/string.o
-
+       $(BUILD_DIR)/lib/string.o \
+       $(BUILD_DIR)/kernel/bitmap.o \
+       $(BUILD_DIR)/kernel/memory.o
 
 # ------------ C Source Code Compile (to obj) ---------------
 $(BUILD_DIR)/kernel/main.o: kernel/main.c
@@ -44,6 +45,12 @@ $(BUILD_DIR)/kernel/debug.o: kernel/debug.c
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/lib/string.o: lib/string.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/kernel/bitmap.o: kernel/bitmap.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/kernel/memory.o: kernel/memory.c
 	$(CC) $(CFLAGS) $< -o $@
 
 

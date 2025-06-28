@@ -1,4 +1,5 @@
 #include <kernel/bitmap.h>
+#include <kernel/debug.h>
 #include <string.h>
 
 // bitmapInit initializes the bmap passed in.
@@ -9,7 +10,7 @@ void bitmapInit(struct bitmap *bmap) {
 
 // bitmapTest returns value of the bit at position bitIdx.
 bool bitmapTest(struct bitmap *bmap, uint32 bitIdx) {
-    return bmap->bits[bitIdx / 8] & (1 << (bitIdx % 8))
+    return bmap->bits[bitIdx / 8] & (1 << (bitIdx % 8));
 }
 
 // bitmapScan finds the start index of cnt consecutive available bits.
@@ -25,7 +26,7 @@ uint32 bitmapScan(struct bitmap *bmap, uint32 cnt) {
 
     // find cnt consecutive 0 bits.
     idx = idx * 8;
-    uint32 startIdx = -1, curCnt = 0;
+    uint32 curCnt = 0;
     for (; idx < sz; idx++) {
         if (bitmapTest(bmap, idx)) { curCnt += 1; }
         else { curCnt = 0; }
@@ -42,6 +43,6 @@ void bitmapSet(struct bitmap *bmap, uint32 bitIdx, int8 val) {
 
     uint32 byteIdx = bitIdx / 8;
     uint32 bitPos = bitIdx % 8;
-    if (val) { bmap[byteIdx] |= (1 << bitPos); }
-    else { bmap[byteIDx] &= ~(1 << bitPos); }
+    if (val) { bmap->bits[byteIdx] |= (1 << bitPos); }
+    else { bmap->bits[byteIdx] &= ~(1 << bitPos); }
 }

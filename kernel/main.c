@@ -11,7 +11,7 @@ int main() {
 
     // asm volatile ("sti");
 
-    ASSERT(0 == 1);
+    // ASSERT(0 == 1);
 
     while (1) {}
 }

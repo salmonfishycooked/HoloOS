@@ -8,7 +8,7 @@ void panicSpin(char *filename, int line, const char *func, const char *condition
     #ifndef NDEBUG
         #define ASSERT(CONDITION)  ((void) 0)
     #else
-        #define ASSERT(CONDITION)  if (!CONDITION) { PANIC(#CONDITION); }
+        #define ASSERT(CONDITION)  if (!(CONDITION)) { PANIC(#CONDITION); }
     #endif
 
 #endif

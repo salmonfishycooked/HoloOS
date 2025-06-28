@@ -3,8 +3,6 @@
 LOADER_STACK_TOP equ LOADER_BASE_ADDR
 
 section LOADER vstart=LOADER_BASE_ADDR
-    jmp loaderStart
-
     ; --------- define GDT -----------
     GDT_BASE:       dd 0x00000000
                     dd 0x00000000

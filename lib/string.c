@@ -107,7 +107,7 @@ char *strrchr(const char *str, uint8 ch) {
 char *strcat(char *dst, const char *src) {
     ASSERT(dst != NULL && src != NULL);
 
-    char *start;
+    char *start = dst;
     while (*dst) { ++dst; }
     for (; *src; ++src, ++dst) { *dst = *src; }
     *dst = '\0';
