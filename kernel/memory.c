@@ -1,10 +1,9 @@
 #include <kernel/memory.h>
 #include <kernel/print.h>
 #include <kernel/debug.h>
+#include <kernel/global.h>
 #include <stdint.h>
 #include <string.h>
-
-#define PG_SIZE 4096
 
 // 0xc009f000 is the top of stack of kernel process,
 // and 0xc009e000 is the pcb of kernel process,

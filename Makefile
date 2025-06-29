@@ -23,7 +23,8 @@ OBJS = $(BUILD_DIR)/kernel/main.o \
        $(BUILD_DIR)/kernel/debug.o \
        $(BUILD_DIR)/lib/string.o \
        $(BUILD_DIR)/kernel/bitmap.o \
-       $(BUILD_DIR)/kernel/memory.o
+       $(BUILD_DIR)/kernel/memory.o \
+       $(BUILD_DIR)/kernel/thread.o
 
 
 # ------------ C Source Code Compile (to obj) ---------------
@@ -52,6 +53,9 @@ $(BUILD_DIR)/kernel/bitmap.o: kernel/bitmap.c
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/kernel/memory.o: kernel/memory.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/kernel/thread.o: kernel/thread.c
 	$(CC) $(CFLAGS) $< -o $@
 
 
