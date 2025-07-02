@@ -1,6 +1,6 @@
 #include <kernel/interrupt.h>
 #include <kernel/global.h>
-#include "stdint.h"
+#include <stdint.h>
 #include <kernel/io.h>
 #include <kernel/print.h>
 
@@ -36,11 +36,25 @@ intrHandler idtTable[IDT_DESC_CNT];
 extern intrHandler intrEntryTable[IDT_DESC_CNT];
 
 static void generalIntrHandler(uint8 num) {
+    // IRQ7 and IRQ15 emit spurious interrupt,
+    // and we don't need to handle them.
     if (num == 0x27 || num == 0x2f) { return; }
 
-    puts("int 0x");
-    putint(num);
-    puts(" occurs!\n");
+    puts("\n\n");
+    puts("!!!!!     exception message     !!!!!\n");
+    puts(intrName[num]);
+    putchar('\n');
+
+    if (num == 14) {
+        uint32 pageFaultVaddr = 0;
+        asm volatile ("movl %%cr2, %0" : "=r"(pageFaultVaddr));
+        puts("page fault address is: ");
+        putint(pageFaultVaddr);
+        putchar('\n');
+    }
+
+    puts("!!!!!     exception message end     !!!!!\n");
+    while (1) {}
 }
 
 static void exceptionInit() {
@@ -138,7 +152,23 @@ enum intrStatus intrGetStatus() {
     uint32 eflags = 0;
     GET_EFLAGS(eflags);
 
-    return eflags && EFLAGS_IF ? INTR_ON : INTR_OFF;
+    return eflags & EFLAGS_IF ? INTR_ON : INTR_OFF;
+}
+
+// intrSetStatus sets the current state of interrupt. (on/off)
+enum intrStatus intrSetStatus(enum intrStatus status) {
+    enum intrStatus oldStatus = intrGetStatus();
+    switch(status) {
+        case INTR_OFF: intrDisable(); break;
+        case INTR_ON: intrEnable(); break;
+    }
+
+    return oldStatus;
+}
+
+// registerHandler reigsters handler of interrupt number to be func.
+void registerHandler(uint8 intrNum, intrHandler func) {
+    idtTable[intrNum] = func;
 }
 
 // idtInit will do all of the work of interrupt initialization

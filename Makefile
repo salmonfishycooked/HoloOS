@@ -24,7 +24,9 @@ OBJS = $(BUILD_DIR)/kernel/main.o \
        $(BUILD_DIR)/lib/string.o \
        $(BUILD_DIR)/kernel/bitmap.o \
        $(BUILD_DIR)/kernel/memory.o \
-       $(BUILD_DIR)/kernel/thread.o
+       $(BUILD_DIR)/kernel/thread.o \
+       $(BUILD_DIR)/lib/list.o \
+       $(BUILD_DIR)/kernel/switchTo.o
 
 
 # ------------ C Source Code Compile (to obj) ---------------
@@ -58,12 +60,18 @@ $(BUILD_DIR)/kernel/memory.o: kernel/memory.c
 $(BUILD_DIR)/kernel/thread.o: kernel/thread.c
 	$(CC) $(CFLAGS) $< -o $@
 
+$(BUILD_DIR)/lib/list.o: lib/list.c
+	$(CC) $(CFLAGS) $< -o $@
+
 
 # ------------ ASM Source Code Compile (to obj) ---------------
 $(BUILD_DIR)/lib/kernel/kernel.o: lib/kernel/kernel.S
 	$(AS) $(ASFLAGS) $< -o $@
 
 $(BUILD_DIR)/lib/kernel/print.o: lib/kernel/print.S
+	$(AS) $(ASFLAGS) $< -o $@
+
+$(BUILD_DIR)/kernel/switchTo.o: kernel/switch.S
 	$(AS) $(ASFLAGS) $< -o $@
 
 

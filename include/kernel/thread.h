@@ -2,6 +2,7 @@
 #define __INCLUDE_KERNEL_THREAD_H
 
 #include <stdint.h>
+#include <list.h>
 
 #define STACK_MAGIC 0x87359642
 
@@ -56,8 +57,16 @@ struct threadStack {
 struct taskStruct {
     uint32 *selfKStack;            // address of kernel stack of current thread
     enum taskStatus status;
-    uint8 priority;
     char name[16];
+    uint8 priority;
+    uint8 ticks;                   // ticks that the process have been executed on cpu
+
+    uint32 elapsedTicks;           // ticks that the process have occupied on cpu
+
+    struct listNode generalTag;    // for being a node in a general list
+    struct listNode allListTag;     // for being a node in the all-thread list
+
+    uint32 *pageDir;               // virtual address of page table of the process
 
     // boundary mark of current kernel stack,
     // for protecting from overflow of stack.
@@ -65,5 +74,10 @@ struct taskStruct {
 };
 
 struct taskStruct *threadStart(char *name, int priority, threadFunc, void *arg);
+struct taskStruct *threadCurrent();
+
+void threadSupportInit();
+
+void schedule();
 
 #endif
