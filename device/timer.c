@@ -29,7 +29,6 @@ static void frequencySet(uint8 counterPort, uint8 counterNo,
 
 // intrTimerHandler is the timer interrupt handler.
 static void intrTimerHandler() {
-    puts("ininin!!!\n");
     struct taskStruct *curThread = threadCurrent();
 
     ASSERT(curThread->stackMagic == STACK_MAGIC);

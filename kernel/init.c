@@ -4,6 +4,7 @@
 #include <kernel/memory.h>
 #include <device/timer.h>
 #include <kernel/thread.h>
+#include <device/console.h>
 
 void initAll() {
     puts("init all...\n");
@@ -13,4 +14,5 @@ void initAll() {
     memInit();                  // initialize memory
 
     threadSupportInit();        // initialize thread support
+    consoleInit();              // initialize terminal device
 }

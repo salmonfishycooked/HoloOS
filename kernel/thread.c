@@ -92,6 +92,40 @@ static void makeMainThread() {
     listAppend(&threadAllList, &mainThread->allListTag);
 }
 
+// threadBlock used to block current thread.
+// the status of current thread will be set to stat;
+void threadBlock(enum taskStatus stat) {
+    ASSERT((stat == TASK_BLOCKED) || (stat == TASK_RUNNING) || (stat == TASK_HANGING));
+
+    enum intrStatus oldStatus = intrDisable();
+
+    struct taskStruct *curThread = threadCurrent();
+    curThread->status = stat;
+
+    schedule();
+
+    intrSetStatus(oldStatus);
+}
+
+// threadUnblock wakes up pthread passed in.
+void threadUnblock(struct taskStruct *pthread) {
+    enum intrStatus oldStatus = intrDisable();
+
+    ASSERT((pthread->status == TASK_BLOCKED) || (pthread->status == TASK_WAITING) ||
+           (pthread->status == TASK_HANGING));
+
+    if (pthread->status != TASK_READY) {
+        ASSERT(!listExist(&threadReadyList, &pthread->generalTag));
+        if (listExist(&threadReadyList, &pthread->generalTag)) {
+            PANIC("thread unblock: blocked thread already in ready list.\n");
+        }
+        listPush(&threadReadyList, &pthread->generalTag);
+        pthread->status = TASK_READY;
+    }
+
+    intrSetStatus(oldStatus);
+}
+
 // schedule used to schedule kernel threads.
 void schedule() {
     ASSERT(intrGetStatus() == INTR_OFF);

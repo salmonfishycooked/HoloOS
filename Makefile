@@ -26,7 +26,9 @@ OBJS = $(BUILD_DIR)/kernel/main.o \
        $(BUILD_DIR)/kernel/memory.o \
        $(BUILD_DIR)/kernel/thread.o \
        $(BUILD_DIR)/lib/list.o \
-       $(BUILD_DIR)/kernel/switchTo.o
+       $(BUILD_DIR)/kernel/switchTo.o \
+       $(BUILD_DIR)/kernel/sync.o \
+       $(BUILD_DIR)/device/console.o
 
 
 # ------------ C Source Code Compile (to obj) ---------------
@@ -61,6 +63,12 @@ $(BUILD_DIR)/kernel/thread.o: kernel/thread.c
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/lib/list.o: lib/list.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/kernel/sync.o: kernel/sync.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/device/console.o: device/console.c
 	$(CC) $(CFLAGS) $< -o $@
 
 
