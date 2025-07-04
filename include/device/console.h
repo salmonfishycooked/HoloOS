@@ -6,7 +6,7 @@
 void consoleInit();
 
 void consolePuts(char *str);
-void consolePutchar(char ch);
+void consolePutchar(uint8 ch);
 void consolePutint(uint32 num);
 
 #endif

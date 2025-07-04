@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <kernel/sync.h>
 #include <kernel/print.h>
+#include <device/console.h>
 
 static struct lock consoleLock;
 

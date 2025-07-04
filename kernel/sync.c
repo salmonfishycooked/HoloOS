@@ -73,3 +73,35 @@ void lockRelease(struct lock *pLock) {
         semaphoreUp(&pLock->semaphore);
     }
 }
+
+void conditionInit(struct condition *cond) {
+    listInit(&cond->waiters);
+}
+
+void conditionWait(struct condition *cond, struct lock *plock) {
+    enum intrStatus oldStatus = intrDisable();
+
+    struct taskStruct *curThread = threadCurrent();
+    listAppend(&cond->waiters, &curThread->generalTag);
+    threadSetStatus(TASK_BLOCKED);
+    lockRelease(plock);
+
+    schedule();
+
+    lockAcquire(plock);
+    intrSetStatus(oldStatus);
+}
+
+void conditionSignal(struct condition *cond) {
+    if (listEmpty(&cond->waiters)) { return; }
+
+    struct listNode *threadTag = listPop(&cond->waiters);
+    struct taskStruct *thread = elem2entry(struct taskStruct, generalTag, threadTag);
+    threadUnblock(thread);
+}
+
+void conditionSignalAll(struct condition *cond) {
+    while (!listEmpty(&cond->waiters)) {
+        conditionSignal(cond);
+    }
+}

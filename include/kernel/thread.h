@@ -75,6 +75,7 @@ struct taskStruct {
 
 struct taskStruct *threadStart(char *name, int priority, threadFunc, void *arg);
 struct taskStruct *threadCurrent();
+void threadSetStatus(enum taskStatus stat);
 void threadBlock(enum taskStatus stat);
 void threadUnblock(struct taskStruct *pthread);
 

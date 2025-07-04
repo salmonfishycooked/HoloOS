@@ -92,6 +92,11 @@ static void makeMainThread() {
     listAppend(&threadAllList, &mainThread->allListTag);
 }
 
+void threadSetStatus(enum taskStatus stat) {
+    struct taskStruct *curThread = threadCurrent();
+    curThread->status = stat;
+}
+
 // threadBlock used to block current thread.
 // the status of current thread will be set to stat
 void threadBlock(enum taskStatus stat) {
@@ -99,9 +104,7 @@ void threadBlock(enum taskStatus stat) {
 
     enum intrStatus oldStatus = intrDisable();
 
-    struct taskStruct *curThread = threadCurrent();
-    curThread->status = stat;
-
+    threadSetStatus(stat);
     schedule();
 
     intrSetStatus(oldStatus);

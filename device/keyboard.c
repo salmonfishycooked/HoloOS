@@ -1,6 +1,8 @@
 #include <kernel/io.h>
 #include <kernel/print.h>
 #include <kernel/interrupt.h>
+#include <device/ioqueue.h>
+#include <device/keyboard.h>
 
 #define KBD_BUF_PORT 0x60               // port of keyboard buffer register
 
@@ -30,6 +32,7 @@
 #define CAPS_LOCK_MAKE      0x3a
 
 static bool ctrlStatus, shiftStatus, altStatus, capslockStatus, extScancode;
+struct ioqueue keyboardBuf;
 
 // indexed by make code of characters.
 // scancode [0]:  combined with shift [1]:  non-combined with shift.
@@ -147,7 +150,7 @@ static void intrKeyboardHandler() {
         uint8 idx = (scancode &= 0x00ff);
         char ch = keymap[idx][shift];
         if (ch) {
-            putchar(ch);
+            ioqueuePutchar(&keyboardBuf, ch);
             return;
         }
 
@@ -176,6 +179,7 @@ static void intrKeyboardHandler() {
 
 void keyboardInit() {
     puts("keyboard init starts.\n");
+    ioqueueInit(&keyboardBuf);
     registerHandler(0x21, intrKeyboardHandler);
     puts("keyboard init done!\n");
 }

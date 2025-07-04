@@ -29,7 +29,8 @@ OBJS = $(BUILD_DIR)/kernel/main.o \
        $(BUILD_DIR)/kernel/switchTo.o \
        $(BUILD_DIR)/kernel/sync.o \
        $(BUILD_DIR)/device/console.o \
-       $(BUILD_DIR)/device/keyboard.o
+       $(BUILD_DIR)/device/keyboard.o \
+       $(BUILD_DIR)/device/ioqueue.o \
 
 
 # ------------ C Source Code Compile (to obj) ---------------
@@ -73,6 +74,9 @@ $(BUILD_DIR)/device/console.o: device/console.c
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/device/keyboard.o: device/keyboard.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/device/ioqueue.o: device/ioqueue.c
 	$(CC) $(CFLAGS) $< -o $@
 
 
