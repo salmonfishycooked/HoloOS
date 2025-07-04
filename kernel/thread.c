@@ -7,12 +7,16 @@
 #include <list.h>
 #include <stdint.h>
 #include <string.h>
+#include <kernel/sync.h>
 
 struct taskStruct *mainThread;
-struct list threadReadyList;
-struct list threadAllList;
+static struct list threadReadyList;
+static struct list threadAllList;
 static struct listNode *threadTag;
 
+static struct spinlock threadReadyListLock;
+static struct spinlock threadAllListLock;
+static struct spinlock threadTagLock;
 
 extern void switchTo(struct taskStruct *cur, struct taskStruct *next);
 
@@ -68,11 +72,15 @@ struct taskStruct *threadStart(char *name, int priority, threadFunc func, void *
     threadInit(task, name, priority);
     threadCreate(task, func, arg);
 
+    spinlockAcquire(&threadReadyListLock);
     ASSERT(!listExist(&threadReadyList, &task->generalTag));
     listAppend(&threadReadyList, &task->generalTag);
+    spinlockRelease(&threadReadyListLock);
 
+    spinlockAcquire(&threadAllListLock);
     ASSERT(!listExist(&threadAllList, &task->allListTag));
     listAppend(&threadAllList, &task->allListTag);
+    spinlockRelease(&threadAllListLock);
 
     // asm volatile ("movl %0, %%esp;"
     //               "pop %%ebp; pop %%ebx; pop %%edi; pop %%esi;"
@@ -88,8 +96,10 @@ static void makeMainThread() {
     mainThread = threadCurrent();
     threadInit(mainThread, "main", 31);
 
+    spinlockAcquire(&threadAllListLock);
     ASSERT(!listExist(&threadAllList, &mainThread->allListTag));
     listAppend(&threadAllList, &mainThread->allListTag);
+    spinlockRelease(&threadAllListLock);
 }
 
 void threadSetStatus(enum taskStatus stat) {
@@ -117,6 +127,7 @@ void threadUnblock(struct taskStruct *pthread) {
     ASSERT((pthread->status == TASK_BLOCKED) || (pthread->status == TASK_WAITING) ||
            (pthread->status == TASK_HANGING));
 
+    spinlockAcquire(&threadReadyListLock);
     if (pthread->status != TASK_READY) {
         ASSERT(!listExist(&threadReadyList, &pthread->generalTag));
         if (listExist(&threadReadyList, &pthread->generalTag)) {
@@ -125,6 +136,7 @@ void threadUnblock(struct taskStruct *pthread) {
         listPush(&threadReadyList, &pthread->generalTag);
         pthread->status = TASK_READY;
     }
+    spinlockRelease(&threadReadyListLock);
 
     intrSetStatus(oldStatus);
 }
@@ -136,8 +148,10 @@ void schedule() {
     struct taskStruct *cur = threadCurrent();
     if (cur->status == TASK_RUNNING) {
         // case: ticks has been run out.
+        spinlockAcquire(&threadReadyListLock);
         ASSERT(!listExist(&threadReadyList, &cur->generalTag));
         listAppend(&threadReadyList, &cur->generalTag);
+        spinlockRelease(&threadReadyListLock);
 
         cur->ticks = cur->priority;
         cur->status = TASK_READY;
@@ -145,10 +159,15 @@ void schedule() {
         // TODO: case: this thread is needed to be scheduled for some events.
     }
 
+    spinlockAcquire(&threadReadyListLock);
     ASSERT(!listEmpty(&threadReadyList));
+    struct listNode *tag = listPop(&threadReadyList);
+    spinlockRelease(&threadReadyListLock);
 
-    threadTag = NULL;
-    threadTag = listPop(&threadReadyList);
+    spinlockAcquire(&threadTagLock);
+    threadTag = tag;
+    spinlockRelease(&threadTagLock);
+
     struct taskStruct *next = elem2entry(struct taskStruct, generalTag, threadTag);
     next->status = TASK_RUNNING;
 
@@ -161,6 +180,9 @@ void threadSupportInit() {
 
     listInit(&threadReadyList);
     listInit(&threadAllList);
+    spinlockInit(&threadReadyListLock);
+    spinlockInit(&threadAllListLock);
+    spinlockInit(&threadTagLock);
 
     makeMainThread();
 
