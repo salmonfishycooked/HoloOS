@@ -31,6 +31,8 @@ OBJS = $(BUILD_DIR)/kernel/main.o \
        $(BUILD_DIR)/device/console.o \
        $(BUILD_DIR)/device/keyboard.o \
        $(BUILD_DIR)/device/ioqueue.o \
+       $(BUILD_DIR)/lib/cas.o \
+       $(BUILD_DIR)/lib/casC.o \
 
 
 # ------------ C Source Code Compile (to obj) ---------------
@@ -79,6 +81,9 @@ $(BUILD_DIR)/device/keyboard.o: device/keyboard.c
 $(BUILD_DIR)/device/ioqueue.o: device/ioqueue.c
 	$(CC) $(CFLAGS) $< -o $@
 
+$(BUILD_DIR)/lib/casC.o: lib/casC.c
+	$(CC) $(CFLAGS) $< -o $@
+
 
 # ------------ ASM Source Code Compile (to obj) ---------------
 $(BUILD_DIR)/lib/kernel/kernel.o: lib/kernel/kernel.S
@@ -88,6 +93,9 @@ $(BUILD_DIR)/lib/kernel/print.o: lib/kernel/print.S
 	$(AS) $(ASFLAGS) $< -o $@
 
 $(BUILD_DIR)/kernel/switchTo.o: kernel/switch.S
+	$(AS) $(ASFLAGS) $< -o $@
+
+$(BUILD_DIR)/lib/cas.o: lib/cas.S
 	$(AS) $(ASFLAGS) $< -o $@
 
 

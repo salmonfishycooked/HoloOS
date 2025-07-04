@@ -4,24 +4,32 @@
 #include <stdint.h>
 #include <list.h>
 
-struct semaphore {
-    uint8 value;
-    struct list waiters;
+#define cpuRelax()    asm volatile("pause" ::: "memory")
+
+struct spinlock {
+    int occupied;
 };
 
 struct lock {
+    int occupied;
     struct taskStruct *holder;
-    struct semaphore semaphore;
-    uint32 holderRepeatedCnt;           // count of holder requesting the lock
+    struct list waiters;
+    struct spinlock waitersLock;
 };
 
 struct condition {
     struct list waiters;
 };
 
-void semaphoreInit(struct semaphore *sem, uint8 value);
-void semaphoreDown(struct semaphore *sem);
-void semaphoreUp(struct semaphore *sem);
+struct semaphore {
+    int value;
+    struct lock lock;
+    struct condition cond;
+};
+
+void spinlockInit(struct spinlock *lock);
+void spinlockAcquire(struct spinlock *lock);
+void spinlockRelease(struct spinlock *lock);
 
 void lockInit(struct lock *pLock);
 void lockAcquire(struct lock *pLock);
@@ -31,5 +39,9 @@ void conditionInit(struct condition *cond);
 void conditionWait(struct condition *cond, struct lock *plock);
 void conditionSignal(struct condition *cond);
 void conditionSignalAll(struct condition *cond);
+
+void semaphoreInit(struct semaphore *sem, int value);
+void semaphoreDown(struct semaphore *sem);
+void semaphoreUp(struct semaphore *sem);
 
 #endif

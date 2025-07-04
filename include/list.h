@@ -12,6 +12,8 @@ struct listNode {
     struct listNode *next;
 };
 
+// list is a Doubly Linked List.
+// not thread-safe!
 struct list {
     struct listNode head;
     struct listNode tail;

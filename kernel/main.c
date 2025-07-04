@@ -7,6 +7,7 @@
 #include <device/console.h>
 #include <device/keyboard.h>
 #include <device/ioqueue.h>
+#include <cas.h>
 
 void work(void *arg);
 
@@ -20,15 +21,15 @@ int main() {
     threadStart("consumer 2", 31, work, " B_");
 
     intrEnable();
-    while (1) {}
+    while (1) { consolePuts("Main ");  }
 }
 
 void work(void *arg) {
     char *p = (char *) arg;
-    // while (1) { consolePuts(p); }
-    while (1) {
-        consolePuts(p);
-        char byte = ioqueueGetchar(&keyboardBuf);
-        consolePutchar(byte);
-    }
+    while (1) { consolePuts(p); }
+    // while (1) {
+    //     consolePuts(p);
+    //     char byte = ioqueueGetchar(&keyboardBuf);
+    //     consolePutchar(byte);
+    // }
 }

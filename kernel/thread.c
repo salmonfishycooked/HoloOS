@@ -130,7 +130,7 @@ void threadUnblock(struct taskStruct *pthread) {
 }
 
 // schedule used to schedule kernel threads.
-void schedule() {
+void schedule() { 
     ASSERT(intrGetStatus() == INTR_OFF);
 
     struct taskStruct *cur = threadCurrent();

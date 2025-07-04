@@ -10,14 +10,10 @@ void listInit(struct list *list) {
 }
 
 void listInsert(struct listNode *before, struct listNode *node) {
-    enum intrStatus oldStatus = intrDisable();
-
     before->prev->next = node;
     node->prev = before->prev;
     node->next = before;
     before->prev = node;
-
-    intrSetStatus(oldStatus);
 }
 
 // listPush inserts the node into the head of the list.
@@ -33,12 +29,8 @@ void listAppend(struct list *list, struct listNode *node) {
 
 // listRemove removes the node from the list where the node exists.
 void listRemove(struct listNode *node) {
-    enum intrStatus oldStatus = intrDisable();
-
     node->prev->next = node->next;
     node->next->prev = node->prev;
-
-    intrSetStatus(oldStatus);
 }
 
 // listPop removes the first node of the list.

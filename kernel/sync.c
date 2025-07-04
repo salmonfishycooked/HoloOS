@@ -5,72 +5,56 @@
 #include <string.h>
 #include <kernel/debug.h>
 #include <kernel/thread.h>
+#include <kernel/print.h>
+#include <cas.h>
 
-void semaphoreInit(struct semaphore *sem, uint8 value) {
-    sem->value = value;
-    listInit(&sem->waiters);
+void spinlockInit(struct spinlock *lock) {
+    lock->occupied = 0;
 }
 
-void lockInit(struct lock *pLock) {
-    pLock->holder = NULL;
-    pLock->holderRepeatedCnt = 0;
-    semaphoreInit(&pLock->semaphore, 1);
+void spinlockAcquire(struct spinlock *lock) {
+    while (!compareAndSwap32(&lock->occupied, 0, 1)) {
+        cpuRelax();
+    }
 }
 
-// semaphoreDown decreases the value in sem by 1.
-// if the value is 0, current thread will be blocked.
-void semaphoreDown(struct semaphore *sem) {
-    enum intrStatus oldStatus = intrDisable();
+void spinlockRelease(struct spinlock *lock) {
+    lock->occupied = 0;
+}
 
-    while (sem->value == 0) {
-        ASSERT(!listExist(&sem->waiters, &threadCurrent()->generalTag));
-        if (listExist(&sem->waiters, &threadCurrent()->generalTag)) {
-            PANIC("semaphoreDown: thread blocked has been in waiter list.\n");
-        }
-        listAppend(&sem->waiters, &threadCurrent()->generalTag);
+void lockInit(struct lock *lock) {
+    lock->holder = NULL;
+    lock->occupied = 0;
+    listInit(&lock->waiters);
+    spinlockInit(&lock->waitersLock);
+}
+
+void lockAcquire(struct lock *lock) {
+    while (!compareAndSwap32(&lock->occupied, 0, 1)) {
+        spinlockAcquire(&lock->waitersLock);
+        listAppend(&lock->waiters, &threadCurrent()->generalTag);
+        spinlockRelease(&lock->waitersLock);
+        
         threadBlock(TASK_BLOCKED);
-    }
-
-    sem->value -= 1;
-
-    intrSetStatus(oldStatus);
+    } 
+    lock->holder = threadCurrent();
 }
 
-// semaphoreUp increases the value in sem by 1.
-// if the sem->waiters isn's empty, it will also wake up a thread in sem->waiters.
-void semaphoreUp(struct semaphore *sem) {
-    enum intrStatus oldStatus = intrDisable();
+void lockRelease(struct lock *lock) {
+    ASSERT(lock->holder == threadCurrent());
 
-    if (!listEmpty(&sem->waiters)) {
-        struct listNode *threadTag = listPop(&sem->waiters);
-        struct taskStruct *threadBlocked = elem2entry(struct taskStruct, generalTag, threadTag);
-        threadUnblock(threadBlocked);
-    }
+    lock->holder = NULL;
+    lock->occupied = 0;
 
-    sem->value += 1;
+    spinlockAcquire(&lock->waitersLock);
+    if (!listEmpty(&lock->waiters)) {
+        struct listNode *threadTag = listPop(&lock->waiters);
+        spinlockRelease(&lock->waitersLock);
 
-    intrSetStatus(oldStatus);
-}
-
-void lockAcquire(struct lock *pLock) {
-    // reentrant case
-    if (pLock->holder == threadCurrent()) {
-        pLock->holderRepeatedCnt += 1;
-        return;
-    }
-
-    semaphoreDown(&pLock->semaphore);
-    pLock->holder = threadCurrent();
-    pLock->holderRepeatedCnt = 1;
-}
-
-void lockRelease(struct lock *pLock) {
-    ASSERT(pLock->holder == threadCurrent());
-
-    pLock->holderRepeatedCnt -= 1;
-    if (pLock->holderRepeatedCnt == 0) {
-        pLock->holder = NULL;
-        semaphoreUp(&pLock->semaphore);
+        struct taskStruct *thread = elem2entry(struct taskStruct, generalTag, threadTag);
+        threadUnblock(thread);
+    } else {
+        spinlockRelease(&lock->waitersLock);
     }
 }
 
@@ -78,17 +62,17 @@ void conditionInit(struct condition *cond) {
     listInit(&cond->waiters);
 }
 
-void conditionWait(struct condition *cond, struct lock *plock) {
+void conditionWait(struct condition *cond, struct lock *lock) {
     enum intrStatus oldStatus = intrDisable();
 
     struct taskStruct *curThread = threadCurrent();
     listAppend(&cond->waiters, &curThread->generalTag);
     threadSetStatus(TASK_BLOCKED);
-    lockRelease(plock);
+    lockRelease(lock);
 
     schedule();
+    lockAcquire(lock);
 
-    lockAcquire(plock);
     intrSetStatus(oldStatus);
 }
 
@@ -104,4 +88,34 @@ void conditionSignalAll(struct condition *cond) {
     while (!listEmpty(&cond->waiters)) {
         conditionSignal(cond);
     }
+}
+
+void semaphoreInit(struct semaphore *sem, int value) {
+    sem->value = value;
+    lockInit(&sem->lock);
+    conditionInit(&sem->cond);
+}
+
+// semaphoreDown decreases the value in sem by 1.
+// if the value is 0, current thread will be blocked.
+void semaphoreDown(struct semaphore *sem) {
+    lockAcquire(&sem->lock);
+
+    while (sem->value == 0) {
+        conditionWait(&sem->cond, &sem->lock);
+    }
+    sem->value -= 1;
+
+    lockRelease(&sem->lock);
+}
+
+// semaphoreUp increases the value in sem by 1.
+// if the sem->waiters isn's empty, it will also wake up a thread in sem->waiters.
+void semaphoreUp(struct semaphore *sem) {
+    lockAcquire(&sem->lock);
+
+    sem->value += 1;
+    conditionSignal(&sem->cond);
+
+    lockRelease(&sem->lock);
 }
