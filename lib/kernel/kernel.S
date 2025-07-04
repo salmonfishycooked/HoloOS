@@ -81,3 +81,18 @@ VECTOR 0x1d, nop
 VECTOR 0x1e, nop                ; nop because 0x1e has ERROR_CODE
 VECTOR 0x1f, push 0
 VECTOR 0x20, push 0
+VECTOR 0x21, push 0
+VECTOR 0x22, push 0
+VECTOR 0x23, push 0
+VECTOR 0x24, push 0
+VECTOR 0x25, push 0
+VECTOR 0x26, push 0
+VECTOR 0x27, push 0
+VECTOR 0x28, push 0
+VECTOR 0x29, push 0
+VECTOR 0x2a, push 0
+VECTOR 0x2b, push 0
+VECTOR 0x2c, push 0
+VECTOR 0x2d, push 0
+VECTOR 0x2e, push 0
+VECTOR 0x2f, push 0

@@ -14,11 +14,12 @@ int main() {
 
     initAll();
 
-    threadStart("kthread 1", 32, work, "A ");
-    threadStart("kthread 2", 8, work, "B ");
+    // threadStart("kthread 1", 32, work, "A ");
+    // threadStart("kthread 2", 8, work, "B ");
 
     intrEnable();
-    while (1) { consolePuts("Main "); }
+    // while (1) { consolePuts("Main "); }
+    while (1) {}
 }
 
 void work(void *arg) {

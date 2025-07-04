@@ -5,6 +5,7 @@
 #include <device/timer.h>
 #include <kernel/thread.h>
 #include <device/console.h>
+#include <device/keyboard.h>
 
 void initAll() {
     puts("init all...\n");
@@ -15,4 +16,5 @@ void initAll() {
 
     threadSupportInit();        // initialize thread support
     consoleInit();              // initialize terminal device
+    keyboardInit();             // initialize keyboard device
 }

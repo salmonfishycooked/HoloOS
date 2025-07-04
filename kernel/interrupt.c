@@ -4,14 +4,14 @@
 #include <kernel/io.h>
 #include <kernel/print.h>
 
-#define IDT_DESC_CNT 0x21       // number of supported interrupts currently
+#define IDT_DESC_CNT 0x30       // number of supported interrupts currently
 
 #define PIC_M_CTRL   0x20       // PIC Master's control port
 #define PIC_M_DATA   0x21       // PIC Master's data port
 #define PIC_S_CTRL   0xa0       // PIC Slave's control port
 #define PIC_S_DATA   0xa1       // PIC Slave's data port
 
-#define EFLAGS_IF   0x00000200  // IF flag's position in eflags
+#define EFLAGS_IF    0x00000200  // IF flag's position in eflags
 #define GET_EFLAGS(EFLAG_VAR)   asm volatile ("pushfl; popl %0" : "=g"(EFLAG_VAR))
 
 // gateDesc is descriptor of interrupt gate
@@ -100,8 +100,9 @@ static void picInit() {
     outb(PIC_S_DATA, 0x01);         // ICW4: 8086 mode, manual EOI
 
     // only open IR0 on master. (Clock Interrupt)
+    //           IR1 on master. (Keyboard Interrupt)
     // masks all other's interrupt.
-    outb(PIC_M_DATA, 0xfe);
+    outb(PIC_M_DATA, 0xfc);
     outb(PIC_S_DATA, 0xff);
 
     puts("pic init done.\n");

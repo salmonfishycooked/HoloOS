@@ -93,7 +93,7 @@ static void makeMainThread() {
 }
 
 // threadBlock used to block current thread.
-// the status of current thread will be set to stat;
+// the status of current thread will be set to stat
 void threadBlock(enum taskStatus stat) {
     ASSERT((stat == TASK_BLOCKED) || (stat == TASK_RUNNING) || (stat == TASK_HANGING));
 
