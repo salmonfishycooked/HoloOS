@@ -24,27 +24,28 @@ void spinlockRelease(struct spinlock *lock) {
 
 void lockInit(struct lock *lock) {
     lock->holder = NULL;
-    lock->occupied = 0;
     listInit(&lock->waiters);
     spinlockInit(&lock->waitersLock);
 }
 
 void lockAcquire(struct lock *lock) {
-    while (!compareAndSwap32(&lock->occupied, 0, 1)) {
+    enum intrStatus stat = INTR_ON;
+    while (!compareAndSwap32((int *) &lock->holder, NULL, (int) threadCurrent())) {
         spinlockAcquire(&lock->waitersLock);
+        stat = intrDisable();
         listAppend(&lock->waiters, &threadCurrent()->generalTag);
+        threadSetStatus(TASK_BLOCKED);
         spinlockRelease(&lock->waitersLock);
-        
-        threadBlock(TASK_BLOCKED);
-    } 
-    lock->holder = threadCurrent();
+
+        schedule();
+        intrSetStatus(stat);
+    }
 }
 
 void lockRelease(struct lock *lock) {
     ASSERT(lock->holder == threadCurrent());
 
     lock->holder = NULL;
-    lock->occupied = 0;
 
     spinlockAcquire(&lock->waitersLock);
     if (!listEmpty(&lock->waiters)) {

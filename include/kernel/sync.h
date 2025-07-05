@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <list.h>
+#include <kernel/interrupt.h>
 
 #define cpuRelax()    asm volatile("pause" ::: "memory")
 
@@ -11,7 +12,6 @@ struct spinlock {
 };
 
 struct lock {
-    int occupied;
     struct taskStruct *holder;
     struct list waiters;
     struct spinlock waitersLock;
