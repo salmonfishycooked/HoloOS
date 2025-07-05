@@ -32,20 +32,17 @@ void lockAcquire(struct lock *lock) {
     enum intrStatus stat = INTR_ON;
     while (!compareAndSwap32((int *) &lock->holder, NULL, (int) threadCurrent())) {
         spinlockAcquire(&lock->waitersLock);
-        stat = intrDisable();
         listAppend(&lock->waiters, &threadCurrent()->generalTag);
-        threadSetStatus(TASK_BLOCKED);
-        spinlockRelease(&lock->waitersLock);
 
         if (compareAndSwap32((int *) &lock->holder, NULL, (int) threadCurrent())) {
-            spinlockAcquire(&lock->waitersLock);
             listRemove(&threadCurrent()->generalTag);
             spinlockRelease(&lock->waitersLock);
-
-            threadSetStatus(TASK_RUNNING);
-            intrSetStatus(stat);
             break;
         }
+
+        stat = intrDisable();
+        threadSetStatus(TASK_BLOCKED);
+        spinlockRelease(&lock->waitersLock);
 
         schedule();
         intrSetStatus(stat);

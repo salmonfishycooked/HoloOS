@@ -21,7 +21,7 @@ int main() {
     threadStart("consumer 2", 31, work, " B_");
 
     intrEnable();
-    while (1) { consolePuts("Main ");  }
+    while (1) { consolePuts("M_");  }
 }
 
 void work(void *arg) {
