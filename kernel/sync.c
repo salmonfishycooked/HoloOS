@@ -37,6 +37,16 @@ void lockAcquire(struct lock *lock) {
         threadSetStatus(TASK_BLOCKED);
         spinlockRelease(&lock->waitersLock);
 
+        if (compareAndSwap32((int *) &lock->holder, NULL, (int) threadCurrent())) {
+            spinlockAcquire(&lock->waitersLock);
+            listRemove(&threadCurrent()->generalTag);
+            spinlockRelease(&lock->waitersLock);
+
+            threadSetStatus(TASK_RUNNING);
+            intrSetStatus(stat);
+            break;
+        }
+
         schedule();
         intrSetStatus(stat);
     }
@@ -53,7 +63,10 @@ void lockRelease(struct lock *lock) {
         spinlockRelease(&lock->waitersLock);
 
         struct taskStruct *thread = elem2entry(struct taskStruct, generalTag, threadTag);
-        threadUnblock(thread);
+        if (thread->status == TASK_BLOCKED) {
+            threadUnblock(thread);
+        }
+
     } else {
         spinlockRelease(&lock->waitersLock);
     }
