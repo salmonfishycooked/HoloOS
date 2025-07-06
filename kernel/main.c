@@ -17,11 +17,11 @@ int main() {
 
     initAll();
 
-    threadStart("consumer 1", 31, work, " A_");
-    threadStart("consumer 2", 31, work, " B_");
+    // threadStart("consumer 1", 31, work, " A_");
+    // threadStart("consumer 2", 31, work, " B_");
 
     intrEnable();
-    while (1) { consolePuts("M_");  }
+    while (1) { } //consolePuts("M_");  }
 }
 
 void work(void *arg) {

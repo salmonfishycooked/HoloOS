@@ -33,6 +33,7 @@ OBJS = $(BUILD_DIR)/kernel/main.o \
        $(BUILD_DIR)/device/ioqueue.o \
        $(BUILD_DIR)/lib/cas.o \
        $(BUILD_DIR)/lib/casC.o \
+       $(BUILD_DIR)/kernel/tss.o
 
 
 # ------------ C Source Code Compile (to obj) ---------------
@@ -82,6 +83,9 @@ $(BUILD_DIR)/device/ioqueue.o: device/ioqueue.c
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/lib/casC.o: lib/casC.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/kernel/tss.o: kernel/tss.c
 	$(CC) $(CFLAGS) $< -o $@
 
 
