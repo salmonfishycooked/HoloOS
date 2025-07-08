@@ -8,15 +8,18 @@
 #include <stdint.h>
 #include <string.h>
 #include <kernel/sync.h>
+#include <kernel/process.h>
+
+#define MAIN_PRIO       31
 
 struct taskStruct *mainThread;
-static struct list threadReadyList;
-static struct list threadAllList;
-static struct listNode *threadTag;
+struct list threadReadyList;
+struct list threadAllList;
+struct listNode *threadTag;
 
-static struct spinlock threadReadyListLock;
-static struct spinlock threadAllListLock;
-static struct spinlock threadTagLock;
+struct spinlock threadReadyListLock;
+struct spinlock threadAllListLock;
+struct spinlock threadTagLock;
 
 extern void switchTo(struct taskStruct *cur, struct taskStruct *next);
 
@@ -36,7 +39,7 @@ struct taskStruct *threadCurrent() {
 
 // threadCreate reserves room for interrupt stack and thread stack,
 // and initializes threadStack struct.
-static void threadCreate(struct taskStruct *task, threadFunc func, void *arg) {
+void threadCreate(struct taskStruct *task, threadFunc func, void *arg) {
     // reserved space for intrrupt stack and thread stack
     task->selfKStack -= sizeof(struct intrStack);
     task->selfKStack -= sizeof(struct threadStack);
@@ -52,7 +55,7 @@ static void threadCreate(struct taskStruct *task, threadFunc func, void *arg) {
 }
 
 // threadInit initializes task of task struct.
-static void threadInit(struct taskStruct *task, char *name, int priority) {
+void threadInit(struct taskStruct *task, char *name, int priority) {
     task->status = TASK_READY;
     if (task == mainThread) { task->status = TASK_RUNNING; }
 
@@ -94,7 +97,7 @@ struct taskStruct *threadStart(char *name, int priority, threadFunc func, void *
 // makeMainThread makes the kernel thread a complete thread.
 static void makeMainThread() {
     mainThread = threadCurrent();
-    threadInit(mainThread, "main", 31);
+    threadInit(mainThread, "main", MAIN_PRIO);
 
     spinlockAcquire(&threadAllListLock);
     ASSERT(!listExist(&threadAllList, &mainThread->allListTag));
@@ -170,6 +173,8 @@ void schedule() {
 
     struct taskStruct *next = elem2entry(struct taskStruct, generalTag, threadTag);
     next->status = TASK_RUNNING;
+
+    processActivate(next);
 
     switchTo(cur, next);
 }

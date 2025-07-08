@@ -27,5 +27,8 @@ void memInit();
 
 void *mallocPage(enum poolFlags pf, uint32 pgCnt);
 void *getKernelPages(uint32 pgCnt);
+void *getUserPages(uint32 pgCnt);
+void *getPage(enum poolFlags pf, uint32 vaddr);
+uint32 v2p(uint32 vaddr);
 
 #endif

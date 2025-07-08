@@ -38,6 +38,7 @@ section .data
 %endmacro
 
 section .text
+global intrExit
 intrExit:
     popad
     pop gs

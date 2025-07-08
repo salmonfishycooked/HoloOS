@@ -2,7 +2,9 @@
 #include <kernel/print.h>
 #include <kernel/debug.h>
 #include <kernel/global.h>
+#include <kernel/sync.h>
 #include <stdint.h>
+#include <kernel/thread.h>
 #include <string.h>
 
 // 0xc009f000 is the top of stack of kernel process,
@@ -22,6 +24,7 @@ struct pool {
     struct bitmap poolBitmap;
     uint32        paddrStart;
     uint32        poolSize;         // unit: byte
+    struct lock   lock;
 };
 
 static struct pool kernelPool, userPool;
@@ -42,8 +45,20 @@ static void *vaddrGet(enum poolFlags pf, uint32 pgCnt) {
             bitmapSet(&kernelVaddr.vaddrBitmap, bitIdxStart + i, 1);
         }
         vaddrStart = kernelVaddr.vaddrStart + bitIdxStart * PG_SIZE;
+
     } else {
-        // TODO: PF_USER
+        // case PF_USER
+        struct taskStruct *cur = threadCurrent();
+        bitIdxStart = bitmapScan(&cur->userVaddr.vaddrBitmap, pgCnt);
+        if (bitIdxStart == -1) { return NULL; }
+
+        for (uint32 i = 0; i < pgCnt; ++i) {
+            bitmapSet(&cur->userVaddr.vaddrBitmap, bitIdxStart + i, 1);
+        }
+        vaddrStart = cur->userVaddr.vaddrStart + bitIdxStart * PG_SIZE;
+
+        // (0xc0000000 - PGSIZE) ~ 0xc0000000 is reserved for stack of user process.
+        ASSERT((uint32) vaddrStart < (0xc0000000 - PG_SIZE))
     }
 
     return (void *) vaddrStart;
@@ -129,7 +144,7 @@ void *mallocPage(enum poolFlags pf, uint32 pgCnt) {
 
 
 // getKernelPages allocates pgCnt available pages,
-// and set all of bits to 0.
+// and sets all of bits to 0.
 // return start virtual address of pgCnt pages if ok;
 // return NULL if not ok.
 void *getKernelPages(uint32 pgCnt) {
@@ -142,8 +157,71 @@ void *getKernelPages(uint32 pgCnt) {
 }
 
 
+// getUserPages allocates pgCnt available pages,
+// and sets all of bits to 0.
+// return start virtual address of pgCnt pages if ok;
+// return NULL if not ok.
+void *getUserPages(uint32 pgCnt) {
+    lockAcquire(&userPool.lock);
+
+    void *vaddr = mallocPage(PF_USER, pgCnt);
+    if (vaddr != NULL) {
+        memset(vaddr, 0, pgCnt * PG_SIZE);
+    }
+
+    lockRelease(&userPool.lock);
+
+    return vaddr;
+}
+
+
+// getPage finds an available physical page frame in pf and relates vaddr to it.
+// only gets 1 page.
+void *getPage(enum poolFlags pf, uint32 vaddr) {
+    struct pool *memPool = pf & PF_KERNEL ? &kernelPool : &userPool;
+    lockAcquire(&memPool->lock);
+
+    struct taskStruct *cur = threadCurrent();
+    int32 bitIdx = -1;
+
+    if (cur->pageDir != NULL && pf == PF_USER) {
+        // case: user process
+        bitIdx = (vaddr - cur->userVaddr.vaddrStart) / PG_SIZE;
+        ASSERT(bitIdx > 0);
+        bitmapSet(&cur->userVaddr.vaddrBitmap, bitIdx, 1);
+    } else if (cur->pageDir == NULL && pf == PF_KERNEL) {
+        // case: kernel process
+        bitIdx = (vaddr - kernelVaddr.vaddrStart) / PG_SIZE;
+        ASSERT(bitIdx > 0);
+        bitmapSet(&kernelVaddr.vaddrBitmap, bitIdx, 1);
+    } else {
+        PANIC("getPage: not allow kernel to allocate user space or user to allocate kernel space!\n");
+    }
+
+    void *pagePhyAddr = palloc(memPool);
+    if (pagePhyAddr == NULL) { return NULL; }
+
+    pageTableAdd((void *) vaddr, pagePhyAddr);
+
+    lockRelease(&memPool->lock);
+
+    return (void *) vaddr;
+}
+
+
+// v2p returns physical address related to vaddr
+uint32 v2p(uint32 vaddr) {
+    uint32 *pte = ptePtr(vaddr);
+
+    return (*pte & 0xfffff000) + (vaddr & 0x00000fff);
+}
+
+
 static void memPoolInit(uint32 memCapacity) {
     puts("  memory pool init starts.\n");
+
+    lockInit(&kernelPool.lock);
+    lockInit(&userPool.lock);
 
     // pde: we have used 1 page
     // pte: we have usde 255 page

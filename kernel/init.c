@@ -12,11 +12,11 @@ void initAll() {
     puts("init all...\n");
 
     idtInit();                  // initialize interrupt
-    timerInit();                // initialize PIT8253 for timer interrupt
     memInit();                  // initialize memory
-
     threadSupportInit();        // initialize thread support
     consoleInit();              // initialize terminal device
     keyboardInit();             // initialize keyboard device
     tssInit();                  // initialize tss
+
+    timerInit();                // initialize PIT8253 for timer interrupt
 }

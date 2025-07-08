@@ -7,9 +7,16 @@
 #include <device/console.h>
 #include <device/keyboard.h>
 #include <device/ioqueue.h>
+#include <kernel/process.h>
 #include <cas.h>
 
-void work(void *arg);
+int valueA = 0;
+int valueB = 0;
+
+void work1(void *arg);
+void work2(void *arg);
+void uWork1(void *arg);
+void uWork2(void *arg);
 
 int main() {
     clearScreen();
@@ -17,19 +24,43 @@ int main() {
 
     initAll();
 
-    // threadStart("consumer 1", 31, work, " A_");
-    // threadStart("consumer 2", 31, work, " B_");
+    threadStart("consumer 1", 31, work1, " A_");
+    threadStart("consumer 2", 31, work2, " B_");
+    processExecute(uWork1, "user program A");
+    processExecute(uWork2, "user program B");
 
     intrEnable();
-    while (1) { } //consolePuts("M_");  }
+    while (1) {}
 }
 
-void work(void *arg) {
+void work1(void *arg) {
     char *p = (char *) arg;
-    while (1) { consolePuts(p); }
-    // while (1) {
-    //     consolePuts(p);
-    //     char byte = ioqueueGetchar(&keyboardBuf);
-    //     consolePutchar(byte);
-    // }
+    while (1) {
+        consolePuts("valueA: 0x");
+        consolePutint(valueA);
+        consolePutchar('\n');
+    }
+}
+
+void work2(void *arg) {
+    char *p = (char *) arg;
+    while (1) {
+        consolePuts("valueB: 0x");
+        consolePutint(valueB);
+        consolePutchar('\n');
+    }
+}
+
+void uWork1(void *arg) {
+    char *p = (char *) arg;
+    while (1) {
+        valueA += 1;
+    }
+}
+
+void uWork2(void *arg) {
+    char *p = (char *) arg;
+    while (1) {
+        valueB += 1;
+    }
 }

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <list.h>
+#include <kernel/memory.h>
 
 #define STACK_MAGIC 0x87359642
 
@@ -55,18 +56,19 @@ struct threadStack {
 };
 
 struct taskStruct {
-    uint32 *selfKStack;            // address of kernel stack of current thread
+    uint32 *selfKStack;               // address of kernel stack of current thread
     enum taskStatus status;
     char name[16];
     uint8 priority;
-    uint8 ticks;                   // ticks that the process have been executed on cpu
+    uint8 ticks;                      // ticks that the process have been executed on cpu
 
-    uint32 elapsedTicks;           // ticks that the process have occupied on cpu
+    uint32 elapsedTicks;              // ticks that the process have occupied on cpu
 
-    struct listNode generalTag;    // for being a node in a general list
-    struct listNode allListTag;     // for being a node in the all-thread list
+    struct listNode generalTag;       // for being a node in a general list
+    struct listNode allListTag;       // for being a node in the all-thread list
 
-    uint32 *pageDir;               // virtual address of page table of the process
+    uint32 *pageDir;                  // virtual address of page table of the process
+    struct virtualAddr userVaddr;     // virtual address space of user process
 
     // boundary mark of current kernel stack,
     // for protecting from overflow of stack.
@@ -75,6 +77,8 @@ struct taskStruct {
 
 struct taskStruct *threadStart(char *name, int priority, threadFunc, void *arg);
 struct taskStruct *threadCurrent();
+void threadInit(struct taskStruct *task, char *name, int priority);
+void threadCreate(struct taskStruct *task, threadFunc func, void *arg);
 void threadSetStatus(enum taskStatus stat);
 void threadBlock(enum taskStatus stat);
 void threadUnblock(struct taskStruct *pthread);
