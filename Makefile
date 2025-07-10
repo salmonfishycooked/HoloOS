@@ -34,7 +34,9 @@ OBJS = $(BUILD_DIR)/kernel/main.o \
        $(BUILD_DIR)/lib/cas.o \
        $(BUILD_DIR)/lib/casC.o \
        $(BUILD_DIR)/kernel/tss.o \
-       $(BUILD_DIR)/kernel/process.o
+       $(BUILD_DIR)/kernel/process.o \
+       $(BUILD_DIR)/lib/kernel/syscall.o \
+       $(BUILD_DIR)/lib/kernel/syscallK.o
 
 
 # ------------ C Source Code Compile (to obj) ---------------
@@ -90,6 +92,12 @@ $(BUILD_DIR)/kernel/tss.o: kernel/tss.c
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/kernel/process.o: kernel/process.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/lib/kernel/syscall.o: lib/kernel/syscall.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/lib/kernel/syscallK.o: lib/kernel/syscallK.c
 	$(CC) $(CFLAGS) $< -o $@
 
 

@@ -97,3 +97,30 @@ VECTOR 0x2c, push 0
 VECTOR 0x2d, push 0
 VECTOR 0x2e, push 0
 VECTOR 0x2f, push 0
+
+
+[bits 32]
+extern syscallTable
+section .text
+global syscallHandler
+syscallHandler:
+    push 0                      ; for unified format
+
+    push ds
+    push es
+    push fs
+    push gs
+
+    pushad
+
+    ; push 0x80                   ; for unified format
+
+    push edx                    ; arg3
+    push ecx                    ; arg2
+    push ebx                    ; arg1
+
+    call [syscallTable + eax * 4]
+    add esp, 12                 ; release stack space occupied by arguments.
+
+    mov [esp + 7 * 4], eax      ; override the value of eax in pushad when enter interrupt.
+    jmp intrExit

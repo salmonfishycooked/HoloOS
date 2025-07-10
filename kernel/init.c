@@ -7,6 +7,7 @@
 #include <device/console.h>
 #include <device/keyboard.h>
 #include <kernel/tss.h>
+#include <kernel/syscall.h>
 
 void initAll() {
     puts("init all...\n");
@@ -17,6 +18,7 @@ void initAll() {
     consoleInit();              // initialize terminal device
     keyboardInit();             // initialize keyboard device
     tssInit();                  // initialize tss
+    syscallInit();              // initialize syscall for user process
 
     timerInit();                // initialize PIT8253 for timer interrupt
 }

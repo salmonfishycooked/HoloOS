@@ -9,6 +9,8 @@
 
 typedef void (*threadFunc) (void *);
 
+typedef uint16 pidType;
+
 enum taskStatus {
     TASK_RUNNING,
     TASK_READY,
@@ -57,6 +59,7 @@ struct threadStack {
 
 struct taskStruct {
     uint32 *selfKStack;               // address of kernel stack of current thread
+    pidType pid;
     enum taskStatus status;
     char name[16];
     uint8 priority;

@@ -4,7 +4,7 @@
 #include <kernel/io.h>
 #include <kernel/print.h>
 
-#define IDT_DESC_CNT 0x30       // number of supported interrupts currently
+#define IDT_DESC_CNT 0x81       // number of supported interrupts currently
 
 #define PIC_M_CTRL   0x20       // PIC Master's control port
 #define PIC_M_DATA   0x21       // PIC Master's data port
@@ -34,6 +34,8 @@ intrHandler idtTable[IDT_DESC_CNT];
 // intrEntryTable is defined in kernel.S
 // records the entry address of every interrupt
 extern intrHandler intrEntryTable[IDT_DESC_CNT];
+
+extern void syscallHandler();
 
 static void generalIntrHandler(uint8 num) {
     // IRQ7 and IRQ15 emit spurious interrupt,
@@ -122,6 +124,9 @@ static void idtDescInit() {
     for (int i = 0; i < IDT_DESC_CNT; i++) {
         makeIdtDesc(&idt[i], IDT_DESC_ATTR_DPL0, intrEntryTable[i]);
     }
+
+    // handle syscall.
+    makeIdtDesc(&idt[0x80], IDT_DESC_ATTR_DPL3, syscallHandler);
 
     puts("idtDescInit done.\n");
 }

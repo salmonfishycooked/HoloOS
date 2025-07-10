@@ -20,6 +20,7 @@ struct listNode *threadTag;
 struct spinlock threadReadyListLock;
 struct spinlock threadAllListLock;
 struct spinlock threadTagLock;
+struct spinlock pidLock;
 
 extern void switchTo(struct taskStruct *cur, struct taskStruct *next);
 
@@ -27,6 +28,17 @@ extern void switchTo(struct taskStruct *cur, struct taskStruct *next);
 static void kernelThread(threadFunc func, void *arg) {
     intrEnable();
     func(arg);
+}
+
+static pidType allocatePid() {
+    static pidType nextPid = 0;
+    spinlockAcquire(&pidLock);
+
+    int ret = ++nextPid;
+
+    spinlockRelease(&pidLock);
+
+    return ret;
 }
 
 // threadCurrent returns the address of task struct of current thread.
@@ -60,6 +72,7 @@ void threadInit(struct taskStruct *task, char *name, int priority) {
     if (task == mainThread) { task->status = TASK_RUNNING; }
 
     strcpy(task->name, name);
+    task->pid = allocatePid();
     task->priority = priority;
     task->selfKStack = (uint32 *) ((uint32) task + PG_SIZE);
     task->ticks = priority;
@@ -188,6 +201,7 @@ void threadSupportInit() {
     spinlockInit(&threadReadyListLock);
     spinlockInit(&threadAllListLock);
     spinlockInit(&threadTagLock);
+    spinlockInit(&pidLock);
 
     makeMainThread();
 
