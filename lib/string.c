@@ -43,6 +43,7 @@ int memcmp(const void *a, const void *b, uint32 size) {
 }
 
 // strcpy will copy src to dst.
+// not include '\0'.
 char *strcpy(char *dst, const char *src) {
     ASSERT(dst != NULL && src != NULL);
 

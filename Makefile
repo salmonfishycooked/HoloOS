@@ -36,7 +36,8 @@ OBJS = $(BUILD_DIR)/kernel/main.o \
        $(BUILD_DIR)/kernel/tss.o \
        $(BUILD_DIR)/kernel/process.o \
        $(BUILD_DIR)/lib/kernel/syscall.o \
-       $(BUILD_DIR)/lib/kernel/syscallK.o
+       $(BUILD_DIR)/lib/kernel/syscallK.o \
+       $(BUILD_DIR)/lib/stdio.o
 
 
 # ------------ C Source Code Compile (to obj) ---------------
@@ -98,6 +99,9 @@ $(BUILD_DIR)/lib/kernel/syscall.o: lib/kernel/syscall.c
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/lib/kernel/syscallK.o: lib/kernel/syscallK.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/lib/stdio.o: lib/stdio.c
 	$(CC) $(CFLAGS) $< -o $@
 
 

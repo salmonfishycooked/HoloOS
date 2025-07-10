@@ -9,6 +9,7 @@
 #include <kernel/debug.h>
 #include <kernel/tss.h>
 #include <kernel/print.h>
+#include <stdio.h>
 
 extern struct spinlock threadReadyListLock;
 extern struct spinlock threadAllListLock;

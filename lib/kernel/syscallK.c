@@ -2,20 +2,34 @@
 #include <stdint.h>
 #include <kernel/thread.h>
 #include <kernel/print.h>
+#include <string.h>
+#include <device/console.h>
+
 
 #define SYSCALL_NR      32
 
+
 typedef void *syscall;
 syscall syscallTable[SYSCALL_NR];
+
 
 static uint32 sysGetpid() {
     return threadCurrent()->pid;
 }
 
+
+static uint32 sysWrite(char *str) {
+    consolePuts(str);
+
+    return strlen(str);
+}
+
+
 void syscallInit() {
     puts("syscall init starts.\n");
 
     syscallTable[SYS_GETPID] = sysGetpid;
+    syscallTable[SYS_WRITE] = sysWrite;
 
     puts("syscall init done!\n");
 }

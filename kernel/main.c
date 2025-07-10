@@ -9,14 +9,14 @@
 #include <device/ioqueue.h>
 #include <kernel/process.h>
 #include <kernel/syscall.h>
+#include <stdio.h>
 
-int pidProgA = 0;
-int pidProgB = 0;
 
 void work1(void *arg);
 void work2(void *arg);
 void uWork1(void *arg);
 void uWork2(void *arg);
+
 
 int main() {
     clearScreen();
@@ -26,45 +26,41 @@ int main() {
 
     processExecute(uWork1, "user program A");
     processExecute(uWork2, "user program B");
-    threadStart("thread 1", 31, work1, "A");
-    threadStart("thread 2", 31, work2, "B");
+    // threadStart("thread 1", 31, work1, "A");
+    // threadStart("thread 2", 31, work2, "B");
 
     intrEnable();
     while (1) {}
 }
 
+
 void work1(void *arg) {
     char *p = (char *) arg;
-    while (1) {
-        consolePuts("pid of thread 1: ");
-        consolePutint(getpid());
-        consolePutchar('\n');
-        consolePuts("pid of user program A: ");
-        consolePutint(pidProgA);
-        consolePutchar('\n');
-    }
-}
-
-void work2(void *arg) {
-    char *p = (char *) arg;
-    while (1) {
-        consolePuts("pid of thread 2: ");
-        consolePutint(getpid());
-        consolePutchar('\n');
-        consolePuts("pid of user program B: ");
-        consolePutint(pidProgB);
-        consolePutchar('\n');
-    }
-}
-
-void uWork1(void *arg) {
-    char *p = (char *) arg;
-    pidProgA = getpid();
+    consolePuts("pid of thread 1: ");
+    consolePutint(getpid());
+    consolePutchar('\n');
     while (1) {}
 }
 
-void uWork2(void *arg) {
+
+void work2(void *arg) {
     char *p = (char *) arg;
-    pidProgB = getpid();
+    consolePuts("pid of thread 2: ");
+    consolePutint(getpid());
+    consolePutchar('\n');
+    while (1) {}
+}
+
+
+void uWork1(void *arg) {
+    char *p = "holo";
+    printf("%s: What's up! my pid is %d%c", p, getpid(), '\n');
+    while (1) {}
+}
+
+
+void uWork2(void *arg) {
+    char *p = "myuri";
+    printf("%s: What's up! my pid is %d%c", p, getpid(), '\n');
     while (1) {}
 }

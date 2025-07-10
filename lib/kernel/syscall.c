@@ -50,3 +50,8 @@
 uint32 getpid() {
     return _syscall0(SYS_GETPID);
 }
+
+// write writes str onto screen.
+uint32 write(char *str) {
+    return _syscall1(SYS_WRITE, str);
+}
