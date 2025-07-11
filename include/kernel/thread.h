@@ -72,6 +72,7 @@ struct taskStruct {
 
     uint32 *pageDir;                  // virtual address of page table of the process
     struct virtualAddr userVaddr;     // virtual address space of user process
+    struct memBlockDesc uBlockDesc[DESC_CNT];
 
     // boundary mark of current kernel stack,
     // for protecting from overflow of stack.

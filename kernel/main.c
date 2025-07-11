@@ -24,10 +24,10 @@ int main() {
 
     initAll();
 
-    processExecute(uWork1, "user program A");
-    processExecute(uWork2, "user program B");
-    // threadStart("thread 1", 31, work1, "A");
-    // threadStart("thread 2", 31, work2, "B");
+    // processExecute(uWork1, "user program A");
+    // processExecute(uWork2, "user program B");
+    threadStart("thread 1", 31, work1, "A");
+    threadStart("thread 2", 31, work2, "B");
 
     intrEnable();
     while (1) {}
@@ -36,8 +36,9 @@ int main() {
 
 void work1(void *arg) {
     char *p = (char *) arg;
-    consolePuts("pid of thread 1: ");
-    consolePutint(getpid());
+    void *addr = sysMalloc(20);
+    consolePuts("thread 1: I used sysMalloc(20), and its start address is 0x");
+    consolePutint((uint32) addr);
     consolePutchar('\n');
     while (1) {}
 }
@@ -45,8 +46,9 @@ void work1(void *arg) {
 
 void work2(void *arg) {
     char *p = (char *) arg;
-    consolePuts("pid of thread 2: ");
-    consolePutint(getpid());
+    void *addr = sysMalloc(30);
+    consolePuts("thread 2: I used sysMalloc(30), and its start address is 0x");
+    consolePutint((uint32) addr);
     consolePutchar('\n');
     while (1) {}
 }

@@ -11,6 +11,7 @@
 #include <kernel/print.h>
 #include <stdio.h>
 
+
 extern struct spinlock threadReadyListLock;
 extern struct spinlock threadAllListLock;
 extern struct list     threadReadyList;
@@ -93,6 +94,7 @@ void processExecute(void *filename, char *name) {
     createUserVaddrBitmap(thread);
     threadCreate(thread, startProcess, filename);
     thread->pageDir = createPageDir();
+    blockDescInit(thread->uBlockDesc);
 
     enum intrStatus oldStatus = intrDisable();
 

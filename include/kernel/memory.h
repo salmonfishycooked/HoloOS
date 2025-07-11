@@ -3,17 +3,37 @@
 
 #include <kernel/bitmap.h>
 #include <stdint.h>
+#include <list.h>
+
+
+#define DESC_CNT        7
+
 
 struct virtualAddr {
     struct bitmap vaddrBitmap;      // bitmap used by virtual address
     uint32        vaddrStart;       // start address of virtual address
 };
 
+
 // used to determine which pool should be used.
 enum poolFlags {
     PF_KERNEL = 1,
     PF_USER   = 2
 };
+
+
+struct memBlock {
+    struct listNode freeNode;
+};
+
+
+// memory block descriptor
+struct memBlockDesc {
+    uint32      blockSize;                  // size of a block
+    uint32      blocksPerArena;             // number of blocks that an arena can contain
+    struct list freeList;                   // list of free blocks
+};
+
 
 // attributes of pte
 #define PG_P_1      1               // present bit
@@ -30,5 +50,8 @@ void *getKernelPages(uint32 pgCnt);
 void *getUserPages(uint32 pgCnt);
 void *getPage(enum poolFlags pf, uint32 vaddr);
 uint32 v2p(uint32 vaddr);
+void *sysMalloc(uint32 size);
+
+void blockDescInit(struct memBlockDesc *descArr);
 
 #endif
