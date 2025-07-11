@@ -45,120 +45,6 @@ static struct pool kernelPool, userPool;
 static struct virtualAddr kernelVaddr;
 
 
-void blockDescInit(struct memBlockDesc *descArr) {
-    uint32 blockSize = 16;
-
-    for (uint32 i = 0; i < DESC_CNT; i++) {
-        descArr[i].blockSize = blockSize;
-        descArr[i].blocksPerArena = (PG_SIZE - sizeof(struct arena)) / blockSize;
-        listInit(&descArr[i].freeList);
-
-        blockSize += blockSize;
-    }
-}
-
-
-// arena2block returns the address of the idx-th block in arena a.
-static struct memBlock *arena2block(struct arena *a, uint32 idx) {
-    return (struct memBlock *) ((uint32) a + sizeof(struct arena) + idx * a->desc->blockSize);
-}
-
-
-// block2arena returns the address of the arena related to b.
-static struct arena *block2arena(struct memBlock *b) {
-    return (struct arena *) ((uint32) b & 0xfffff000);
-}
-
-
-// sysMalloc allocates size bytes in heap.
-void *sysMalloc(uint32 size) {
-    enum poolFlags pf;
-    struct pool *memPool;
-    uint32 poolSize;
-    struct memBlockDesc *descs;
-    struct taskStruct *curThread = threadCurrent();
-
-    // determine what memory pool we should use
-    if (curThread->pageDir == NULL) {
-        // case: kernel thread
-        pf = PF_KERNEL;
-        poolSize = kernelPool.poolSize;
-        memPool = &kernelPool;
-        descs = kBlockDescs;
-    } else {
-        // case: user thread
-        pf = PF_USER;
-        poolSize = userPool.poolSize;
-        memPool = &userPool;
-        descs = curThread->uBlockDesc;
-    }
-
-    if (size <= 0 || size >= poolSize) { return NULL; }
-
-    struct arena *a;
-    struct memBlock *b;
-
-    lockAcquire(&memPool->lock);
-
-    if (size > 1024) {
-        // allocates page frame directly.
-        uint32 pageCnt = (size + sizeof(struct arena) + PG_SIZE - 1) / PG_SIZE;
-        a = mallocPage(pf, pageCnt);
-        if (a == NULL) {
-            lockRelease(&memPool->lock);
-            return NULL;
-        }
-
-        memset(a, 0, pageCnt * PG_SIZE);
-        a->desc = NULL;
-        a->cnt = pageCnt;
-        a->large = true;
-
-        lockRelease(&memPool->lock);
-        return (void *) (a + 1);
-    }
-
-    // case: 0 < size < 1024
-    // allocates block from arena.
-    uint8 descIdx;
-    for (descIdx = 0; descIdx < DESC_CNT; descIdx++) {
-        if (size <= descs[descIdx].blockSize) { break; }
-    }
-
-    // if there's no arena remaining, we create a new arena.
-    if (listEmpty(&descs[descIdx].freeList)) {
-        a = mallocPage(pf, 1);
-        if (a == NULL) {
-            lockRelease(&memPool->lock);
-            return NULL;
-        }
-
-        memset(a, 0, PG_SIZE);
-        a->desc = &descs[descIdx];
-        a->large = false;
-        a->cnt = descs[descIdx].blocksPerArena;
-
-        // split up the arena.
-        enum intrStatus oldStatus = intrDisable();
-        for (uint32 blockIdx = 0; blockIdx < descs[descIdx].blocksPerArena; blockIdx++) {
-            b = arena2block(a, blockIdx);
-            ASSERT(!listExist(&a->desc->freeList, &b->freeNode));
-            listAppend(&a->desc->freeList, &b->freeNode);
-        }
-        intrSetStatus(oldStatus);
-    }
-
-    b = elem2entry(struct memBlock, freeNode, listPop(&(descs[descIdx].freeList)));
-    memset(b, 0, descs[descIdx].blockSize);
-
-    a = block2arena(b);
-    a->cnt -= 1;
-
-    lockRelease(&memPool->lock);
-    return (void *) b;
-}
-
-
 // vaddrGet finds pgCnt pages available to use.
 // return start address if ok;
 // return NULL if not ok.
@@ -220,6 +106,97 @@ static void *palloc(struct pool *memPool) {
     uint32 pagePhyAddr = (bitIdx * PG_SIZE) + memPool->paddrStart;
 
     return (void *) pagePhyAddr;
+}
+
+
+// pfree reclaims page frame started at pagePhyAddr to corresponding memory pool.
+static void pfree(uint32 pagePhyAddr) {
+    struct pool *memPool;
+    uint32 bitIdx = 0;
+    if (pagePhyAddr >= userPool.paddrStart) {
+        memPool = &userPool;
+        bitIdx = (pagePhyAddr - userPool.paddrStart) / PG_SIZE;
+    } else {
+        memPool = &kernelPool;
+        bitIdx = (pagePhyAddr - kernelPool.paddrStart) / PG_SIZE;
+    }
+
+    bitmapSet(&memPool->poolBitmap, bitIdx, 0);
+}
+
+
+// pageTablePteRemove removes P bit of pte related to vaddr.
+static void pageTablePteRemove(uint32 vaddr) {
+    uint32 *pte = ptePtr(vaddr);
+    *pte &= ~PG_P_1;
+
+    // update TLB
+    asm volatile ("invlpg %0" : : "m"(vaddr) : "memory");
+}
+
+
+// vaddrRemove reclaims pageCnt virtual pages started at _vaddr.
+static void vaddrRemove(enum poolFlags pf, void *_vaddr, uint32 pageCnt) {
+    uint32 bitIdxStart = 0, vaddr = (uint32) _vaddr;
+
+    if (pf == PF_KERNEL) {
+        bitIdxStart = (vaddr - kernelVaddr.vaddrStart) / PG_SIZE;
+        for (uint32 i = 0; i < pageCnt; i++) {
+            bitmapSet(&kernelVaddr.vaddrBitmap, bitIdxStart + i, 0);
+        }
+    } else {
+        struct taskStruct *curThread = threadCurrent();
+        bitIdxStart = (vaddr - curThread->userVaddr.vaddrStart) / PG_SIZE;
+        for (uint32 i = 0; i < pageCnt; i++) {
+            bitmapSet(&curThread->userVaddr.vaddrBitmap, bitIdxStart + i, 0); 
+        }
+    }
+}
+
+
+// mfreePage reclaims pageCnt physical page frames started at _vaddr.
+static void mfreePage(enum poolFlags pf, void *_vaddr, uint32 pageCnt) {
+    uint32 pagePhyAddr, vaddr = (uint32) _vaddr;
+
+    ASSERT(pageCnt >= 1 && vaddr % PG_SIZE == 0);
+
+    pagePhyAddr = v2p(vaddr);
+
+    // make sure that pagePhyAddr is over lower 1MB + 1KB Page Directory + 1KB Page Table
+    ASSERT(pagePhyAddr % PG_SIZE == 0 && pagePhyAddr >= 0x102000);
+
+    if (pagePhyAddr >= userPool.paddrStart) {
+        // case: pagePhyAddr is located in user memory pool.
+        for (uint32 i = 0; i < pageCnt; i++) {
+            pagePhyAddr = v2p(vaddr);
+
+            // make sure pagePhyAddr belongs to user memory pool.
+            ASSERT(pagePhyAddr % PG_SIZE == 0 && pagePhyAddr >= userPool.paddrStart);
+
+            pfree(pagePhyAddr);
+            pageTablePteRemove(vaddr);
+
+            vaddr += PG_SIZE;
+        }
+
+    } else {
+        // case: pagePhyAddr is located in kernel memory pool.
+        for (uint32 i = 0; i < pageCnt; i++) {
+            pagePhyAddr = v2p(vaddr);
+
+            // make sure pagePhyAddr belongs to kernel  memory pool.
+            ASSERT(pagePhyAddr % PG_SIZE == 0 && \
+                   pagePhyAddr < userPool.paddrStart && pagePhyAddr >= kernelPool.paddrStart);
+
+            pfree(pagePhyAddr);
+            pageTablePteRemove(vaddr);
+
+            vaddr += PG_SIZE;
+        }
+    }
+
+    // clear corresponding bit of virtual address space.
+    vaddrRemove(pf, _vaddr, pageCnt);
 }
 
 
@@ -345,6 +322,164 @@ uint32 v2p(uint32 vaddr) {
 }
 
 
+void blockDescInit(struct memBlockDesc *descArr) {
+    uint32 blockSize = 16;
+
+    for (uint32 i = 0; i < DESC_CNT; i++) {
+        descArr[i].blockSize = blockSize;
+        descArr[i].blocksPerArena = (PG_SIZE - sizeof(struct arena)) / blockSize;
+        listInit(&descArr[i].freeList);
+
+        blockSize += blockSize;
+    }
+}
+
+
+// arena2block returns the address of the idx-th block in arena a.
+static struct memBlock *arena2block(struct arena *a, uint32 idx) {
+    return (struct memBlock *) ((uint32) a + sizeof(struct arena) + idx * a->desc->blockSize);
+}
+
+
+// block2arena returns the address of the arena related to b.
+static struct arena *block2arena(struct memBlock *b) {
+    return (struct arena *) ((uint32) b & 0xfffff000);
+}
+
+
+// sysMalloc allocates size bytes in heap.
+void *sysMalloc(uint32 size) {
+    enum poolFlags pf;
+    struct pool *memPool;
+    uint32 poolSize;
+    struct memBlockDesc *descs;
+    struct taskStruct *curThread = threadCurrent();
+
+    // determine what memory pool we should use
+    if (curThread->pageDir == NULL) {
+        // case: kernel thread
+        pf = PF_KERNEL;
+        poolSize = kernelPool.poolSize;
+        memPool = &kernelPool;
+        descs = kBlockDescs;
+    } else {
+        // case: user thread
+        pf = PF_USER;
+        poolSize = userPool.poolSize;
+        memPool = &userPool;
+        descs = curThread->uBlockDesc;
+    }
+
+    if (size <= 0 || size >= poolSize) { return NULL; }
+
+    struct arena *a;
+    struct memBlock *b;
+
+    lockAcquire(&memPool->lock);
+
+    if (size > 1024) {
+        // allocates page frame directly.
+        uint32 pageCnt = (size + sizeof(struct arena) + PG_SIZE - 1) / PG_SIZE;
+        a = mallocPage(pf, pageCnt);
+        if (a == NULL) {
+            lockRelease(&memPool->lock);
+            return NULL;
+        }
+
+        memset(a, 0, pageCnt * PG_SIZE);
+        a->desc = NULL;
+        a->cnt = pageCnt;
+        a->large = true;
+
+        lockRelease(&memPool->lock);
+        return (void *) (a + 1);
+    }
+
+    // case: 0 < size < 1024
+    // allocates block from arena.
+    uint8 descIdx;
+    for (descIdx = 0; descIdx < DESC_CNT; descIdx++) {
+        if (size <= descs[descIdx].blockSize) { break; }
+    }
+
+    // if there's no arena remaining, we create a new arena.
+    if (listEmpty(&descs[descIdx].freeList)) {
+        a = mallocPage(pf, 1);
+        if (a == NULL) {
+            lockRelease(&memPool->lock);
+            return NULL;
+        }
+
+        memset(a, 0, PG_SIZE);
+        a->desc = &descs[descIdx];
+        a->large = false;
+        a->cnt = descs[descIdx].blocksPerArena;
+
+        // split up the arena.
+        enum intrStatus oldStatus = intrDisable();
+        for (uint32 blockIdx = 0; blockIdx < descs[descIdx].blocksPerArena; blockIdx++) {
+            b = arena2block(a, blockIdx);
+            ASSERT(!listExist(&a->desc->freeList, &b->freeNode));
+            listAppend(&a->desc->freeList, &b->freeNode);
+        }
+        intrSetStatus(oldStatus);
+    }
+
+    b = elem2entry(struct memBlock, freeNode, listPop(&(descs[descIdx].freeList)));
+    memset(b, 0, descs[descIdx].blockSize);
+
+    a = block2arena(b);
+    a->cnt -= 1;
+
+    lockRelease(&memPool->lock);
+    return (void *) b;
+}
+
+
+// sysFree reclaims memory blocks started at ptr.
+void sysFree(void *ptr) {
+    ASSERT(ptr != NULL);
+    if (ptr == NULL) { return; }
+
+    enum poolFlags pf;
+    struct pool *memPool;
+    if (threadCurrent()->pageDir == NULL) {
+        ASSERT((uint32) ptr >= K_HEAP_START);
+        pf = PF_KERNEL;
+        memPool = &kernelPool;
+    } else {
+        pf = PF_USER;
+        memPool = &userPool;
+    }
+
+    lockAcquire(&memPool->lock);
+    struct memBlock *b = ptr;
+    struct arena    *a = block2arena(b);
+
+    ASSERT(a->large == 0 || a->large == 1);
+
+    if (a->desc == NULL && a->large == true) {
+        // case: blockSize > 1024
+        mfreePage(pf, a, a->cnt);
+    } else {
+        // case: blockSize <= 1024
+        listAppend(&a->desc->freeList, &b->freeNode);
+        a->cnt += 1;
+
+        // if all blocks in this arena are free, then reclaims the arena.
+        if (a->cnt == a->desc->blocksPerArena) {
+            for (uint32 idx = 0; idx < a->desc->blocksPerArena; idx++) {
+                struct memBlock *b = arena2block(a, idx);
+                ASSERT(listExist(&a->desc->freeList, &b->freeNode));
+                listRemove(&b->freeNode);
+            }
+            mfreePage(pf, a, 1);
+        }
+    }
+
+    lockRelease(&memPool->lock);
+}
+
 static void memPoolInit(uint32 memCapacity) {
     puts("  memory pool init starts.\n");
 
@@ -402,6 +537,7 @@ static void memPoolInit(uint32 memCapacity) {
 
     puts("  memory pool init done.\n");
 }
+
 
 void memInit() {
     puts("memory init starts.\n");

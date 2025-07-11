@@ -24,8 +24,8 @@ int main() {
 
     initAll();
 
-    // processExecute(uWork1, "user program A");
-    // processExecute(uWork2, "user program B");
+    processExecute(uWork1, "user program A");
+    processExecute(uWork2, "user program B");
     threadStart("thread 1", 31, work1, "A");
     threadStart("thread 2", 31, work2, "B");
 
@@ -36,33 +36,79 @@ int main() {
 
 void work1(void *arg) {
     char *p = (char *) arg;
-    void *addr = sysMalloc(20);
-    consolePuts("thread 1: I used sysMalloc(20), and its start address is 0x");
-    consolePutint((uint32) addr);
+    void *addr1 = sysMalloc(256);
+    void *addr2 = sysMalloc(255);
+    void *addr3 = sysMalloc(254);
+    consolePuts("thread 1 malloc addr: ");
+    consolePutint((uint32) addr1); consolePuts(", ");
+    consolePutint((uint32) addr2); consolePuts(", ");
+    consolePutint((uint32) addr3);
     consolePutchar('\n');
+
+    int cpuDelay = 100000;
+    while (cpuDelay--) {}
+
+    // sysFree(addr1);
+    // sysFree(addr2);
+    // sysFree(addr3);
+
     while (1) {}
 }
 
 
 void work2(void *arg) {
     char *p = (char *) arg;
-    void *addr = sysMalloc(30);
-    consolePuts("thread 2: I used sysMalloc(30), and its start address is 0x");
-    consolePutint((uint32) addr);
+    void *addr1 = sysMalloc(256);
+    void *addr2 = sysMalloc(255);
+    void *addr3 = sysMalloc(254);
+    consolePuts("thread 2 malloc addr: ");
+    consolePutint((uint32) addr1); consolePuts(", ");
+    consolePutint((uint32) addr2); consolePuts(", ");
+    consolePutint((uint32) addr3);
     consolePutchar('\n');
+
+    int cpuDelay = 100000;
+    while (cpuDelay--) {}
+
+    // sysFree(addr1);
+    // sysFree(addr2);
+    // sysFree(addr3);
+
     while (1) {}
 }
 
 
 void uWork1(void *arg) {
-    char *p = "holo";
-    printf("%s: What's up! my pid is %d%c", p, getpid(), '\n');
+    char *p = (char *) arg;
+    void *addr1 = malloc(256);
+    void *addr2 = malloc(255);
+    void *addr3 = malloc(254);
+    printf("program a malloc addr: 0x%x, 0x%x, 0x%x\n", (uint32) addr1, (uint32) addr2, (uint32) addr3);
+
+    int cpuDelay = 100000;
+    while (cpuDelay--) {}
+
+    free(addr1);
+    free(addr2);
+    free(addr3);
+
     while (1) {}
 }
 
 
 void uWork2(void *arg) {
-    char *p = "myuri";
-    printf("%s: What's up! my pid is %d%c", p, getpid(), '\n');
+    char *p = (char *) arg;
+    void *addr1 = malloc(256);
+    void *addr2 = malloc(255);
+    void *addr3 = malloc(254);
+    printf("program b malloc addr: 0x%x, 0x%x, 0x%x\n", (uint32) addr1, (uint32) addr2, (uint32) addr3);
+
+    int cpuDelay = 100000;
+    while (cpuDelay--) {}
+
+    free(addr1);
+    free(addr2);
+    free(addr3);
+
     while (1) {}
 }

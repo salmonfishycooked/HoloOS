@@ -51,6 +51,7 @@ void *getUserPages(uint32 pgCnt);
 void *getPage(enum poolFlags pf, uint32 vaddr);
 uint32 v2p(uint32 vaddr);
 void *sysMalloc(uint32 size);
+void sysFree(void *ptr);
 
 void blockDescInit(struct memBlockDesc *descArr);
 

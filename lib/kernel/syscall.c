@@ -46,12 +46,26 @@
  * below are user interfaces for calling real syscall function in kernel.
  */
 
+
 // getpid used for getting current id of process.
 uint32 getpid() {
     return _syscall0(SYS_GETPID);
 }
 
+
 // write writes str onto screen.
 uint32 write(char *str) {
     return _syscall1(SYS_WRITE, str);
+}
+
+
+// malloc allocates memory of size bytes, and returns its start address.
+void *malloc(uint32 size) {
+    return (void *) _syscall1(SYS_MALLOC, size);
+}
+
+
+// free reclaims memory started at ptr.
+void free(void *ptr) {
+    _syscall1(SYS_FREE, ptr);
 }

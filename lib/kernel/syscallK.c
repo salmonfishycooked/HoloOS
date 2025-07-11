@@ -4,6 +4,7 @@
 #include <kernel/print.h>
 #include <string.h>
 #include <device/console.h>
+#include <kernel/memory.h>
 
 
 #define SYSCALL_NR      32
@@ -30,6 +31,8 @@ void syscallInit() {
 
     syscallTable[SYS_GETPID] = sysGetpid;
     syscallTable[SYS_WRITE] = sysWrite;
+    syscallTable[SYS_MALLOC] = sysMalloc;
+    syscallTable[SYS_FREE] = sysFree;
 
     puts("syscall init done!\n");
 }
